@@ -15,7 +15,7 @@ from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload, HttpReque
 from googleapiclient.errors import HttpError
 
 st.set_page_config(
-    page_title="AGEAI Questionnaire",
+    page_title="Falling Walls Summit '24",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -123,36 +123,6 @@ def download_and_cache_csv(_service, file_id):
     else:
         return None
 
-# def save_labels_to_google_sheets(sheets_service, spreadsheet_id, user_id, image_responses):
-#     try:
-#         current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-#         values = []
-        
-#         for image_id, response_dict in image_responses.items():
-#             image_name = next((img['name'] for img in st.session_state.all_images if img['id'] == image_id), "Unknown Image")
-#             for question, answers in response_dict.items():
-#                 if isinstance(answers, dict):
-#                     for option, value in answers.items():
-#                         if isinstance(value, bool) and value:
-#                             values.append([user_id, image_name, current_datetime, question, option])
-#                         elif isinstance(value, str) and option.endswith('_explanation'):
-#                             values.append([user_id, image_name, current_datetime, f"{question} - Explanation", f"{option[:-12]}: {value}"])
-#                 else:
-#                     values.append([user_id, image_name, current_datetime, question, str(answers)])
-        
-#         body = {'values': values}
-        
-#         result = sheets_service.spreadsheets().values().append(
-#             spreadsheetId=spreadsheet_id,
-#             range='Sheet1',
-#             valueInputOption='USER_ENTERED',
-#             body=body
-#         ).execute()
-
-#         st.sidebar.success('Responses saved successfully to Google Sheets')
-#     except Exception as e:
-#         st.error(f"Error saving labels to Google Sheets: {str(e)}")
-
 def save_labels_to_google_sheets(sheets_service, spreadsheet_id, user_id, image_responses):
     try:
         current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -258,20 +228,6 @@ def display_question(question, current_image_id, review_mode=False, previous_res
 
     responses = {}
 
-    # if isinstance(question['options'], dict):  # Round 3 logic (nested options)
-    #     for category, options in question['options'].items():
-    #         st.write(f"#### {category}")
-    #         if options:
-    #             for option in options:
-    #                 col1, col2 = st.columns([1, 3])
-    #                 with col1:
-    #                     selected = st.checkbox(option, key=f"{current_image_id}_{category}_{option}")
-    #                 with col2:
-    #                     if selected and question.get('requires_explanation'):
-    #                         explanation = st.text_area(f"Why {option}?", key=f"{current_image_id}_{option}_explanation")
-    #                         responses[f"{option}_explanation"] = explanation
-    #                 if selected:
-    #                     responses[option] = True
     if isinstance(question['options'], dict):  # Round 3 logic
         all_options = []
         categories_options = [] # Store (category, option) tuples
@@ -374,9 +330,9 @@ def main():
         st.error("No se pudieron obtener los servicios de Google.")
         return
 
-    drive_url = "https://drive.google.com/drive/u/0/folders/1ii7UIuwg2zhoTNytADMIfW9QKRgg51Bs"
-    parent_folder_name = "09_20_LABELLING_TEST"
-    spreadsheet_id = "10HgyUYfkiS8LuXXRTTHcO9IzglwTXb6DU7Yu_m9z7yE"
+    drive_url = "https://drive.google.com/drive/u/0/folders/1GwfHfrsEH7jGisVdeUdGJOPG7TlbUyl8"
+    parent_folder_name = "10_14_FALLING_WALLS"
+    spreadsheet_id = "1kkpKzDOkwJ58vgvp0IIAhS-yOSJxId8VJ4Bjxj7MmJk"
 
     parent_folder_id = extract_folder_id(drive_url)
 
@@ -411,7 +367,7 @@ def main():
                 col1, col2, col3 = st.columns([1, 2, 1])
 
                 with col2:
-                    st.markdown("<h1 style='text-align: center;'>AGEAI Labelling</h1>", unsafe_allow_html=True) #Welcome to the 
+                    st.markdown("<h1 style='text-align: center;'>AGEAI - Falling Walls Summit</h1>", unsafe_allow_html=True) #Welcome to the 
                     st.markdown("<p style='text-align: center;'>This tool is designed to help us collect data about images created with AI.</p>", unsafe_allow_html=True)
                     st.markdown("<p style='text-align: center;'>You will be presented with a series of images and questions. Please answer them to the best of your ability.</p>", unsafe_allow_html=True)
                     st.markdown("<p style='text-align: center;'>Your responses are valuable and will contribute to the improving our findings.</p>", unsafe_allow_html=True)
