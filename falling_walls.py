@@ -123,37 +123,84 @@ def download_and_cache_csv(_service, file_id):
     else:
         return None
 
+# def save_labels_to_google_sheets(sheets_service, spreadsheet_id, user_id, image_responses):
+#     try:
+#         current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+#         values = []
+
+#         for image_id, response_dict in image_responses.items():
+#             image_name = next((img['name'] for img in st.session_state.all_images if img['id'] == image_id), "Unknown Image")
+#             for question, answers in response_dict.items():
+#                 if isinstance(answers, dict):
+#                     # ***Corrected "Other" handling***
+#                     if "other_characteristic" in answers:  # Check for "other_characteristic" key
+#                         characteristic = answers.get("other_characteristic", "")  # Get the characteristic (or empty string if not present)
+#                         values.append([user_id, image_name, current_datetime, question, characteristic]) # Append characteristic
+
+#                     if "other_explanation" in answers: # Check for other_explanation
+#                         explanation = answers.get("other_explanation", "") # Get explanation (or empty string)
+#                         values.append([user_id, image_name, current_datetime, f"{question} - Explanation", explanation]) # Append explanation
+
+#                     # Handle other options and explanations (unchanged)
+#                     for option, value in answers.items():
+#                         if option not in ["other_characteristic", "other_explanation"]: # Avoid duplicate entries
+#                             if isinstance(value, bool) and value:
+#                                 values.append([user_id, image_name, current_datetime, question, option])
+#                             # elif isinstance(value, str) and option.endswith('_explanation'):
+#                             #     values.append([user_id, image_name, current_datetime, f"{question} - Explanation", f"{option[:-12]}: {value}"])
+#                             elif isinstance(value, str) : #and option.endswith('_explanation')
+#                                 values.append([user_id, image_name, current_datetime, question, value]) # Append other response directly
+
+#                 else: # Not a dictionary (single-choice, etc.)
+#                     values.append([user_id, image_name, current_datetime, question, str(answers)])
+                    
+#         body = {'values': values}
+        
+#         result = sheets_service.spreadsheets().values().append(
+#             spreadsheetId=spreadsheet_id,
+#             range='Sheet1',
+#             valueInputOption='USER_ENTERED',
+#             body=body
+#         ).execute()
+
+#         st.sidebar.success('Responses saved successfully to Google Sheets')
+#     except Exception as e:
+#         st.error(f"Error saving labels to Google Sheets: {str(e)}")
+
 def save_labels_to_google_sheets(sheets_service, spreadsheet_id, user_id, image_responses):
     try:
         current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         values = []
 
-        for image_id, response_dict in image_responses.items():
-            image_name = next((img['name'] for img in st.session_state.all_images if img['id'] == image_id), "Unknown Image")
-            for question, answers in response_dict.items():
-                if isinstance(answers, dict):
-                    # ***Corrected "Other" handling***
-                    if "other_characteristic" in answers:  # Check for "other_characteristic" key
-                        characteristic = answers.get("other_characteristic", "")  # Get the characteristic (or empty string if not present)
-                        values.append([user_id, image_name, current_datetime, question, characteristic]) # Append characteristic
+        for image_id, steps_data in image_responses.items():
+            image_name = next((img['name'] for img in st.session_state.random_images if img['id'] == image_id), "Unknown Image")
+            
+            for step, step_data in steps_data.items():
+                tags = step_data.get("Tags", [])
+                comments = step_data.get("Comments", "")
+                
+                # Add a row for each tag
+                for tag in tags:
+                    values.append([
+                        user_id,
+                        image_name,
+                        current_datetime,
+                        step,
+                        "Tag",
+                        tag
+                    ])
+                
+                # Add a row for comments if there are any
+                if comments:
+                    values.append([
+                        user_id,
+                        image_name,
+                        current_datetime,
+                        step,
+                        "Comment",
+                        comments
+                    ])
 
-                    if "other_explanation" in answers: # Check for other_explanation
-                        explanation = answers.get("other_explanation", "") # Get explanation (or empty string)
-                        values.append([user_id, image_name, current_datetime, f"{question} - Explanation", explanation]) # Append explanation
-
-                    # Handle other options and explanations (unchanged)
-                    for option, value in answers.items():
-                        if option not in ["other_characteristic", "other_explanation"]: # Avoid duplicate entries
-                            if isinstance(value, bool) and value:
-                                values.append([user_id, image_name, current_datetime, question, option])
-                            # elif isinstance(value, str) and option.endswith('_explanation'):
-                            #     values.append([user_id, image_name, current_datetime, f"{question} - Explanation", f"{option[:-12]}: {value}"])
-                            elif isinstance(value, str) : #and option.endswith('_explanation')
-                                values.append([user_id, image_name, current_datetime, question, value]) # Append other response directly
-
-                else: # Not a dictionary (single-choice, etc.)
-                    values.append([user_id, image_name, current_datetime, question, str(answers)])
-                    
         body = {'values': values}
         
         result = sheets_service.spreadsheets().values().append(
@@ -219,7 +266,23 @@ questionnaire = {
 
 N_IMAGES_PER_QUESTION = 2  # Número de imágenes a mostrar por cada pregunta
 
-#def display_question(question, current_image_id):
+def get_tags_for_step(step):
+    # Define tags for each step
+    tags = {
+        1: ["Vulnerability", "Strength", "Passiveness", "Assertiveness", "Limitations", "Empowered"],
+        2: ["Active Role", "Passive Role", "Independence", "Dependence", "Engaged", "Isolated"],
+        3: ["Positive Emotion", "Negative Emotion", "Wisdom", "Inexperience", "Vitality", "Frailty"]
+    }
+    return tags[step]
+
+def store_responses(image_id, tags, comments):
+    if image_id not in st.session_state.image_responses:
+        st.session_state.image_responses[image_id] = {}
+    st.session_state.image_responses[image_id][f"Step {st.session_state.current_step}"] = {
+        "Tags": tags,
+        "Comments": comments
+    }
+
 def display_question(question, current_image_id, review_mode=False, previous_responses={}):
     st.write("### **Question:**")
     st.write(question['question'])
@@ -323,7 +386,7 @@ def display_question(question, current_image_id, review_mode=False, previous_res
 
     return responses
     
-def main():
+# def main():
     drive_service, sheets_service = get_google_services()
     
     if not drive_service or not sheets_service:
@@ -521,6 +584,157 @@ def main():
                 st.write("We appreciate your time and effort in completing this questionnaire.")
                 if st.button("Start New Questionnaire"):
                     st.session_state.current_question = 0
+                    st.session_state.image_responses = {}
+                    st.session_state.page = 'start'
+                    st.session_state.user_id = ''
+                    st.session_state.review_mode = False
+                    st.rerun()
+
+    else:
+        st.error("Could not obtain the parent folder ID.")
+
+def main():
+    drive_service, sheets_service = get_google_services()
+    
+    if not drive_service or not sheets_service:
+        st.error("No se pudieron obtener los servicios de Google.")
+        return
+
+    drive_url = "https://drive.google.com/drive/u/0/folders/1GwfHfrsEH7jGisVdeUdGJOPG7TlbUyl8"
+    parent_folder_name = "10_14_FALLING_WALLS"
+    spreadsheet_id = "1kkpKzDOkwJ58vgvp0IIAhS-yOSJxId8VJ4Bjxj7MmJk"
+
+    parent_folder_id = extract_folder_id(drive_url)
+
+    # Initialize session state variables
+    if 'page' not in st.session_state:
+        st.session_state.page = 'start'
+    if 'current_step' not in st.session_state:
+        st.session_state.current_step = 1
+    if 'user_id' not in st.session_state:
+        st.session_state.user_id = ''
+    if 'review_mode' not in st.session_state:
+        st.session_state.review_mode = False    
+    if 'random_images' not in st.session_state:
+        st.session_state.random_images = []
+    if 'image_responses' not in st.session_state:
+        st.session_state.image_responses = {}
+
+    if parent_folder_id:
+        images_folder_id, csv_file_id = find_images_folder_and_csv_id(drive_service, parent_folder_name)
+        if images_folder_id and csv_file_id:
+            image_list = list_images_in_folder(drive_service, images_folder_id)
+
+            if not st.session_state.random_images:
+                st.session_state.random_images = random.sample(image_list, 6)  # 2 images per step, 3 steps
+
+            if st.session_state.page == 'start':
+                col1, col2, col3 = st.columns([1, 2, 1])
+
+                with col2:
+                    st.markdown("<h1 style='text-align: center;'>AGEAI - Falling Walls Summit</h1>", unsafe_allow_html=True)
+                    st.markdown("<p style='text-align: center;'>This tool is designed to help us collect data about images created with AI.</p>", unsafe_allow_html=True)
+                    st.markdown("<p style='text-align: center;'>You will be presented with a series of images and questions. Please answer them to the best of your ability.</p>", unsafe_allow_html=True)
+                    st.markdown("<p style='text-align: center;'>Your responses are valuable and will contribute to improving our findings.</p>", unsafe_allow_html=True)
+                    
+                    st.session_state.user_id = st.text_input('Please, enter your user ID (your email)', value=st.session_state.user_id)
+                    
+                    if st.session_state.user_id:
+                        _, button_col, _ = st.columns([1, 1, 1])
+                        with button_col:
+                            if st.button("Start Questionnaire"):
+                                st.session_state.page = 'questionnaire'
+                                st.rerun()
+                    else:
+                        st.warning("Please enter a user ID and click to start the questionnaire.")
+
+            elif st.session_state.page == 'questionnaire':
+                st.title(f"Step {st.session_state.current_step} of 3")
+                
+                col1, col2 = st.columns(2)
+
+                # Display two images side by side
+                for i in range(2):
+                    with col1 if i == 0 else col2:
+                        current_image = st.session_state.random_images[2*(st.session_state.current_step-1) + i]
+                        image_bytes = download_file_from_google_drive(drive_service, current_image['id'])
+                        st.image(image_bytes, use_column_width=True, caption=current_image['name'])
+
+                        st.subheader(f"Image {i+1}")
+                        tags = get_tags_for_step(st.session_state.current_step)
+                        selected_tags = []
+                        for tag in tags:
+                            if st.button(tag, key=f"step{st.session_state.current_step}_img{i}_{tag}"):
+                                selected_tags.append(tag)
+                        
+                        comments = st.text_area(f"Comments for Image {i+1}", key=f"step{st.session_state.current_step}_comments_{i}")
+                        
+                        # Store responses
+                        store_responses(current_image['id'], selected_tags, comments)
+
+                # Navigation
+                nav_col1, nav_col2, nav_col3 = st.columns([1, 1, 1])
+                
+                with nav_col1:
+                    if st.button("Previous Step") and st.session_state.current_step > 1:
+                        st.session_state.current_step -= 1
+                        st.rerun()
+
+                with nav_col2:
+                    st.write(f"<div style='text-align: center;'>Step {st.session_state.current_step} of 3</div>", unsafe_allow_html=True)
+
+                with nav_col3:
+                    if st.button("Next Step"):
+                        if st.session_state.current_step < 3:
+                            st.session_state.current_step += 1
+                        else:
+                            st.session_state.page = 'review'
+                            st.session_state.review_mode = True
+                        st.rerun()
+
+                st.progress(st.session_state.current_step / 3)
+
+                # Sidebar navigation
+                for step in range(1, 4):
+                    if st.sidebar.button(f"Step {step}", disabled=step > st.session_state.current_step):
+                        st.session_state.current_step = step
+                        st.rerun()
+
+            elif st.session_state.page == 'review':
+                st.title("Questionnaire completed")
+                st.write("You have completed all questions. You can review your answers or submit the questionnaire.")
+
+                if st.button("Review answers"):
+                    st.session_state.current_step = 1
+                    st.session_state.page = 'questionnaire'
+                    st.session_state.review_mode = True
+                    st.rerun()
+
+                if st.button("Submit questionnaire"):
+                    save_labels_to_google_sheets(
+                        sheets_service, 
+                        spreadsheet_id, 
+                        st.session_state.user_id, 
+                        st.session_state.image_responses
+                    )
+
+                    st.session_state.page = 'end'
+                    st.session_state.review_mode = False
+                    
+                    # Clear cache and image-related session state
+                    st.cache_data.clear()
+                    del st.session_state['random_images']
+                    del st.session_state['image_responses']
+
+                    st.rerun()
+
+            elif st.session_state.page == 'end':
+                st.title("Thanks for participating! 😊")
+                st.balloons()
+                st.write("Your responses have been saved and will be used to improve our AI systems.")
+                st.write("We appreciate your time and effort in completing this questionnaire.")
+                if st.button("Start New Questionnaire"):
+                    st.session_state.current_step = 1
                     st.session_state.image_responses = {}
                     st.session_state.page = 'start'
                     st.session_state.user_id = ''
