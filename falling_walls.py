@@ -1,26 +1,33 @@
 import streamlit as st
-from PIL import Image
-import pandas as pd
-from datetime import datetime
+
 import io
 import os
 import re
-import random
 import json
+import uuid
 import base64
+import random
+import time
+import pandas as pd
+from PIL import Image
+from datetime import datetime
+
+from pathlib import Path
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload, HttpRequest
 from googleapiclient.errors import HttpError
 
+os.environ['GOOGLE_SERVICE_ACCOUNT'] = "ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAidHJhbnF1aWwtaGF3ay00Mjk3MTItcjkiLAogICJwcml2YXRlX2tleV9pZCI6ICJjYTIyMmZlMmI1Y2I4YjkwZTdhZTUyYTdkYjI3NzRjZDg2ZTYxZmE4IiwKICAicHJpdmF0ZV9rZXkiOiAiLS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tXG5NSUlFdlFJQkFEQU5CZ2txaGtpRzl3MEJBUUVGQUFTQ0JLY3dnZ1NqQWdFQUFvSUJBUURsdVhYc1lMVG0zeGJpXG5FN0Q5eTR6R1R6ZXlmV2xsWnEwTVhhVjRka2ZiSWNYWnZhdWVKUlluY1dRZVNheThFdk1IZ0NlcmN2Y3VDL0xnXG52OEtyY21NTEZtRTc2Qm1URENya1duSEdsUzlsZUJLRGtmWVh3c09PdWd4VmZrSStadDNtc3dud3V2Unlsdld6XG5QSXZPWDJyTm5DV1U0K05PR3NJa0hmeitVaFRGQXZuSkhBc3E2N25zZzU5MEhza09yUU1ZalRTWXpoa0hKdkRUXG5JcVRNa29lZ3FFQVQ4V0FpUzRsSUJPMDQ3YkEwb1VXZUh6UWxOZTJTZVdHMVpkQjNOclpGeCt1b1BVYjREbnJLXG5Hdlh1Q213a3dad2tWb0VEM0h0QnJJYXZMclJENDVNajlPN3kwKy9MbzMwejltcTJROGc0YWhQcUNCazI3RmR4XG5pRnRIOHJHRkFnTUJBQUVDZ2dFQU1VQXVOb1BUTk80ZVIxRG1jTHNManRhYi85SGdYME9BbFRhY2k3TjhHMUJsXG56UlZiYmxmUUpKdXNWY3dBMHYrVENBZ2pPU0E0T3pDSG5VU3ZkVGRjWVp1bU5BUkNPMkx2N1M0dzExelRvUUw1XG5vU2lSWksyMlpHcWh5MUI2M2tzS2h2UGFqVGhmd1JONVVMaUoxckJoUXZ5WG1CQzFnbUM5UDZZSVAvUVVETnA2XG45M0RoNWxLZGZidjNMaENJWEdYR3JQUnROdmszNEZ5OTQ4ME1rZHVwallEQVJmZXdVWEo4VEhSOGczdzZ5VTZLXG5xOXlhd3ZaZzBkSXp6ajJ6REV5WTk1THg1a0hNKzZiRXF6UVJDSTkrV0lRQzcrTkRXeDMycDI3SGEyTitTVDJDXG50bjRKdldCcS9HQ0tDTmRVYUptbVdxM0RKY2RSQVFUMFZLMWFYRjNPM3dLQmdRRDNGc0JVREFrSmllU3RyVWxVXG5vSEJXVFFaTmt0ZDVaeCt5UllhVzNJVTVMKzRzSDdyWWpZdDJzQWJqYjJXL1BVZjRGcmhBaHRXd0E4UHBCLzZOXG5WQkxZWVArb1pMNjQ0ZEtFUi9uTmNyMFg1Nk5QTFE5UEYvcUJodDhBTkFncmtTMVdubDhxYlRJSjZ2bTY2UnVHXG5wTDdoTmVkU1p3TnRtWDV2UjVzT09aaVYzd0tCZ1FEdUFtUnZ2WGFDM1laTnI5aHREOWlKWEs4TURxZlEwVStzXG5YNVpGbnFRTkYyRXRkVDBURWlKK0Y3N29FbGZBNlFwSWU5WW50VmxMSXdjLzRLZjNIVWVjQ3lNUUJDaHp1NFY3XG4zcnpKK3psaFAyWUJuQ0VDdE55VDA4R2ZDZDZMS2FNd01pa0VkUjlLV3dBMGo2NzhPcnRSTlVtcXJtL29lUVIyXG5IMWpPci9OOUd3S0JnQjlsL0xxeGJOU1JlVVc0cDREaGdtVDFGTC8yMFByVVorcTNld3JncXUxQmNmcVpiWnpuXG5IN25OVkpMQ0xTUElIY1VnM2ZrVktVSmN1Q0I4cTVRNkFzc01TSENWbk1iUnEzYXp6c0tVdWdLM3BNRUM4TmNVXG5MUGtZc20zTUx0MmFiVEI4bjRzOHBRY3RuTjVya052alEzNUs0MEpOWk5vZ2p6aUUyT2ROMmwzeEFvR0FNN3lsXG5aSHpFMURHZlRpZlpYZXZCNENvYml2MXNrVUhPbGVPNVlLelpjRmNTc3JUM2I3dlRiNkZ0eURpa2hyU2huWnY5XG5zMmdDWHdqZ1BJeHpObzVRMEtUREhHb3ErTzFjV003VUx2dkRQMVp1c0E3bVJoWldsSFBGZFBMS1EybnJwVUJpXG5GaXYzZjB4RXdTZ3ltM1dRM2xnOUNUTWQ5R1RLQ1h0SzdMTG10TjBDZ1lFQTV5RDFwd01Hd29HbFZ6aVF1dE1yXG4yVnJxOTRuQ1dvUU1NL0k4a1ZncEQyc0M1cXBlWGhiUXl3SWNJZjVNN0dWWWc3VzByTjd1cVZQa2Ntdm5Sb1pHXG5RVWZHY1A0UDd4ZDM1eXJOd09NejFFUTk0TlQ4UjNIL1JxVHhldDdUQ0RtNjc4RWZSamlET2Jra0pzby8xUDFvXG5la3E3SSs5OWpuU3F5TjRWMUNBYlAzND1cbi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS1cbiIsCiAgImNsaWVudF9lbWFpbCI6ICJjb21wdGUtc2VydmVpQHRyYW5xdWlsLWhhd2stNDI5NzEyLXI5LmlhbS5nc2VydmljZWFjY291bnQuY29tIiwKICAiY2xpZW50X2lkIjogIjEwNzgyMzc0Mzk5MTM5MTk4NDYwMyIsCiAgImF1dGhfdXJpIjogImh0dHBzOi8vYWNjb3VudHMuZ29vZ2xlLmNvbS9vL29hdXRoMi9hdXRoIiwKICAidG9rZW5fdXJpIjogImh0dHBzOi8vb2F1dGgyLmdvb2dsZWFwaXMuY29tL3Rva2VuIiwKICAiYXV0aF9wcm92aWRlcl94NTA5X2NlcnRfdXJsIjogImh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL29hdXRoMi92MS9jZXJ0cyIsCiAgImNsaWVudF94NTA5X2NlcnRfdXJsIjogImh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL3JvYm90L3YxL21ldGFkYXRhL3g1MDkvY29tcHRlLXNlcnZlaSU0MHRyYW5xdWlsLWhhd2stNDI5NzEyLXI5LmlhbS5nc2VydmljZWFjY291bnQuY29tIiwKICAidW5pdmVyc2VfZG9tYWluIjogImdvb2dsZWFwaXMuY29tIgp9Cg=="  # Pruébalo directamente en el código
+
 st.set_page_config(
     page_title="Falling Walls Summit '24",
     page_icon="🧠",
     layout="wide",
-    initial_sidebar_state="collapsed"
-)
+    initial_sidebar_state="collapsed")
 
+#GOOGLE SERVICES    
 def get_google_services():
     try:
         # Obtener la cadena codificada de la variable de entorno
@@ -102,6 +109,25 @@ def find_images_folder_and_csv_id(service, parent_folder_name):
         st.error(f"Error al buscar la carpeta 'IMAGES' y el CSV: {str(e)}")
         return None, None
 
+#TOOLS
+def generate_user_id():
+    return str(uuid.uuid4())  # Unique user ID based on UUID
+
+def display_pdf(pdf_bytes):
+    base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')  # Encode the bytes directly
+    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="800" height="800" type="application/pdf"></iframe>'
+    st.markdown(pdf_display, unsafe_allow_html=True)
+
+def display_pdf_from_file(pdf_path):
+    """Muestra un PDF desde un archivo local"""
+    try:
+        with open(pdf_path, "rb") as f:
+            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="700" height="1000" type="application/pdf"></iframe>'
+        st.markdown(pdf_display, unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"Error al cargar el PDF: {str(e)}")
+
 @st.cache_data()
 def list_images_in_folder(_service, folder_id):
     try:
@@ -116,279 +142,165 @@ def list_images_in_folder(_service, folder_id):
         return []
 
 @st.cache_data()
-def download_and_cache_csv(_service, file_id):
-    csv_bytes = download_file_from_google_drive(_service, file_id)
-    if csv_bytes:
-        return pd.read_csv(io.BytesIO(csv_bytes))
-    else:
-        return None
-
-# def save_labels_to_google_sheets(sheets_service, spreadsheet_id, user_id, image_responses):
-#     try:
-#         current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-#         values = []
-
-#         for image_id, response_dict in image_responses.items():
-#             image_name = next((img['name'] for img in st.session_state.all_images if img['id'] == image_id), "Unknown Image")
-#             for question, answers in response_dict.items():
-#                 if isinstance(answers, dict):
-#                     # ***Corrected "Other" handling***
-#                     if "other_characteristic" in answers:  # Check for "other_characteristic" key
-#                         characteristic = answers.get("other_characteristic", "")  # Get the characteristic (or empty string if not present)
-#                         values.append([user_id, image_name, current_datetime, question, characteristic]) # Append characteristic
-
-#                     if "other_explanation" in answers: # Check for other_explanation
-#                         explanation = answers.get("other_explanation", "") # Get explanation (or empty string)
-#                         values.append([user_id, image_name, current_datetime, f"{question} - Explanation", explanation]) # Append explanation
-
-#                     # Handle other options and explanations (unchanged)
-#                     for option, value in answers.items():
-#                         if option not in ["other_characteristic", "other_explanation"]: # Avoid duplicate entries
-#                             if isinstance(value, bool) and value:
-#                                 values.append([user_id, image_name, current_datetime, question, option])
-#                             # elif isinstance(value, str) and option.endswith('_explanation'):
-#                             #     values.append([user_id, image_name, current_datetime, f"{question} - Explanation", f"{option[:-12]}: {value}"])
-#                             elif isinstance(value, str) : #and option.endswith('_explanation')
-#                                 values.append([user_id, image_name, current_datetime, question, value]) # Append other response directly
-
-#                 else: # Not a dictionary (single-choice, etc.)
-#                     values.append([user_id, image_name, current_datetime, question, str(answers)])
-                    
-#         body = {'values': values}
-        
-#         result = sheets_service.spreadsheets().values().append(
-#             spreadsheetId=spreadsheet_id,
-#             range='Sheet1',
-#             valueInputOption='USER_ENTERED',
-#             body=body
-#         ).execute()
-
-#         st.sidebar.success('Responses saved successfully to Google Sheets')
-#     except Exception as e:
-#         st.error(f"Error saving labels to Google Sheets: {str(e)}")
-
-def save_labels_to_google_sheets(sheets_service, spreadsheet_id, user_id, image_responses):
-    try:
-        current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        values = []
-
-        for image_id, steps_data in image_responses.items():
-            image_name = next((img['name'] for img in st.session_state.random_images if img['id'] == image_id), "Unknown Image")
-            
-            for step, step_data in steps_data.items():
-                tags = step_data.get("Tags", [])
-                comments = step_data.get("Comments", "")
-                
-                # Add a row for each tag
-                for tag in tags:
-                    values.append([
-                        user_id,
-                        image_name,
-                        current_datetime,
-                        step,
-                        "Tag",
-                        tag
-                    ])
-                
-                # Add a row for comments if there are any
-                if comments:
-                    values.append([
-                        user_id,
-                        image_name,
-                        current_datetime,
-                        step,
-                        "Comment",
-                        comments
-                    ])
-
-        body = {'values': values}
-        
-        result = sheets_service.spreadsheets().values().append(
-            spreadsheetId=spreadsheet_id,
-            range='Sheet1',
-            valueInputOption='USER_ENTERED',
-            body=body
-        ).execute()
-
-        st.sidebar.success('Responses saved successfully to Google Sheets')
-    except Exception as e:
-        st.error(f"Error saving labels to Google Sheets: {str(e)}")
-
-# Define the questionnaire structure
-questionnaire = {
-    "ROUND 1": [
-        {
-            "question": "Q1. Indicate if the activity you see in the image correlates with the activity formulated in the prompt",
-            "options": ["Yes", "No", "Don't know"],
-            "definition": """The activity you see in the image is the main action people you observe is doing. For example: eating, walking, speaking...<br>
-                            <br><b>Options:</b><br>
-                            - Yes: The image is not in contradiction to the activity formulated in the prompt.<br>
-                            - No: The image is clearly not the activity formulated in the prompt.<br>
-                            - Don't know: You can't decide if the activity is the same in both cases (prompt and image).""",
-            "multiple": False
-        }
-    ],
-    "ROUND 2": [
-        {
-            "question": "Q5. Indicate what assistive object you appreciate in the image (choose one or more)",
-            "options": ["Wheelchairs", "Glasses (but not sun glasses)", "Prosthetic limbs", "White canes", "Others", "None"],
-            "definition": "Assistive products can range from physical products such as wheelchairs, glasses, prosthetic limbs, white canes, and hearing aids to digital solutions such as speech recognition or time management software and captioning",
-            "multiple": True,
-            "other_field": True
-        }
-    ],
-    "ROUND 3": [
-        {
-            "question": "Q8. Select the characteristics that best describe this images",
-            "options": {
-                "Attitude": ["Positive attitude", "Negative attitude"],
-                "Role": ["Active role", "Passive role"],
-                "Physics": ["Physically active", "Physical limitations"],
-                "Style": ["Modern style", "Old style"],
-                "Other": []
-            },
-            "definition": "Characteristics refers to the person you see in the image (attitude, role, physics) and to the person/background surrounding them (For example: clothes, walls with memories, etc).",
-            "explanation": {
-                "Positive attitude": "The person is depicted relaxed, happy, or carefree",
-                "Negative attitude": "The person is depicted worried, sad or concerned",
-                "Active role": "The person has actively performing the activity of the prompt",
-                "Passive role": "The person is passively disengaged from the activity of the prompt",
-                "Physically active": "The person exhibits no physical limitations in doing certain activities",
-                "Physical limitations": "The person shows physical limitations in doing certain activities",
-                "Modern style": "The person is depicted in a stereotypical young style",
-                "Old style": "The person is depicted in a stereotypical old style"
-            },
-            "multiple": True,
-            "requires_explanation": True
-        }
-    ]
-}
-
-N_IMAGES_PER_QUESTION = 2  # Número de imágenes a mostrar por cada pregunta
-
-def get_tags_for_step(step):
-    # Define tags for each step
-    tags = {
-        1: ["Vulnerability", "Strength", "Passiveness", "Assertiveness", "Limitations", "Empowered"],
-        2: ["Active Role", "Passive Role", "Independence", "Dependence", "Engaged", "Isolated"],
-        3: ["Positive Emotion", "Negative Emotion", "Wisdom", "Inexperience", "Vitality", "Frailty"]
-    }
-    return tags[step]
-
-def store_responses(image_id, tags, comments):
-    if image_id not in st.session_state.image_responses:
-        st.session_state.image_responses[image_id] = {}
-    st.session_state.image_responses[image_id][f"Step {st.session_state.current_step}"] = {
-        "Tags": tags,
-        "Comments": comments
-    }
-
-def display_question(question, current_image_id, review_mode=False, previous_responses={}):
-    st.write("### **Question:**")
-    st.write(question['question'])
-    st.write("### **Definition:**")
-    st.markdown(question['definition'], unsafe_allow_html=True)
-
-    responses = {}
-
-    if isinstance(question['options'], dict):  # Round 3 logic
-        all_options = []
-        categories_options = [] # Store (category, option) tuples
-
-        for category, options in question['options'].items():
-            st.write(f"#### {category}")
-            all_options.extend(options)
-            categories_options.extend([(category, option) for option in options]) # Store category with each option
-
-        num_cols = 2
-        cols = st.columns(num_cols)
-
-        for i, (category, option) in enumerate(categories_options): # Use category and option
-            with cols[i % num_cols]:
-                prev_selected = previous_responses.get(option, False) if review_mode else False  # Use previous responses for review mode
-                selected = st.checkbox(option, key=f"{current_image_id}_{category}_{option}", value=prev_selected)  # Include category in key
-                if selected and question.get('requires_explanation'):
-                    prev_explanation = previous_responses.get(f"{option}_explanation", "") if review_mode else ""
-                    explanation = st.text_area(f"Why {option}?", key=f"{current_image_id}_{option}_explanation", value=prev_explanation)
-                    responses[f"{option}_explanation"] = explanation
-                if selected:
-                    responses[option] = True
-            
-        if "Other" in question['options']:
-            other_key = f"{current_image_id}_other_characteristic" # Unique key based on image ID
-            other_characteristic = st.text_input("Other characteristic:", key=other_key)
-            responses["other_characteristic"] = other_characteristic
-
-            if other_characteristic:
-                explanation_key = f"{current_image_id}_other_explanation" # Unique key based on image ID
-                explanation = st.text_area("Why?", key=explanation_key)
-                responses["other_explanation"] = explanation
-                    
-    else:  # Round 1 & 2 logic (simple options)
-        if question.get('multiple', False):  # Multiple choice (checkboxes)
-            selected_options = []
-            for option in question['options']:
-                if option == "Others" and question.get('other_field'):
-
-                   # Get previous state for review mode
-                    #prev_selected = option in previous_responses
-                    prev_selected = option in previous_responses if review_mode else False  # Previous selection for "Others" checkbox
-
-                    #selected = st.checkbox(option, key=f"{current_image_id}_{option}", value=prev_selected if review_mode else False)
-                    selected = st.checkbox(option, key=f"{current_image_id}_{option}", value=prev_selected)
-                    
-                    #selected = st.checkbox(option, key=f"{current_image_id}_{option}")
-                    if selected:
-                        ## other_text = st.text_input("Please specify:", key=f"{current_image_id}_other_text")
-                        ## selected_options.append(other_text)
-                        #other_text = st.text_input("Please specify:", key=f"{current_image_id}_other_text")
-                        #selected_options.append(f"{option}: {other_text}")  # Format the "Others" response
-                        ##selected_options.append(f"{question['question']} - {option}: {other_text}")  # Format the "Others" response
-
-                        #prev_other_text = previous_responses.get(option, "")  # Get previous "Others" text
-                        prev_other_text = previous_responses.get(f"{question['question']} - {option}:", "") if review_mode and isinstance(previous_responses, list) and any(option in item for item in previous_responses) else ""
-                        #other_text = st.text_input("Please specify:", value=prev_other_text if review_mode else "", key=f"{current_image_id}_other_text")
-                        other_text = st.text_input("Please specify:", value=prev_other_text.split(": ")[1] if ": " in prev_other_text else "", key=f"{current_image_id}_other_text")
-                        #selected_options.append(f"{option}: {other_text}")
-                        selected_options.append(f"{question['question']} - {option}: {other_text}")
-                else:
-                    #prev_selected = option in previous_responses
-                    prev_selected = option in previous_responses if review_mode else False # Previous selection for other checkboxes
-                    #selected = st.checkbox(option, key=f"{current_image_id}_{option}", value=prev_selected if review_mode else False)
-                    selected = st.checkbox(option, key=f"{current_image_id}_{option}", value=prev_selected)
-
-                    if selected:
-                        selected_options.append(option)
-            responses = selected_options
-        else:  # Single choice (radio)
-            # prev_selected = previous_responses if review_mode else None
-            # selected_option = st.radio("Select one:", question['options'], key=f"{current_image_id}_radio", index=question['options'].index(prev_selected) if prev_selected in question['options'] else 0)
-            # responses = selected_option
-            if review_mode and isinstance(previous_responses, dict):
-                prev_selected = list(previous_responses.keys())[0] if previous_responses else None
-            elif review_mode:
-                prev_selected = previous_responses
-            else:
-                prev_selected = None
-            # ***KEY CHANGE HERE***:  Handle cases where prev_selected is not in current options
-            try:
-                index = question['options'].index(prev_selected) if prev_selected in question['options'] else 0
-            except ValueError:  # Handle the case where prev_selected is not in question['options']
-                index = 0  # Default to the first option
-            selected_option = st.radio(
-                "Select one:",
-                question['options'],
-                key=f"{current_image_id}_radio",
-                index=index
-                #index=question['options'].index(prev_selected) if prev_selected in question['options'] else 0
-            )
-            responses = selected_option
-
-    return responses
+def get_images_for_prompt(_drive_service, prompt):
+    images = {}
     
+    # Folder IDs for "neutral" and "older"
+    neutral_folder_id = "1z8zZJQqMZDFtJG1hx7mosAt_5DlXuZU8"
+    older_folder_id = "1-zseBhQMP-KeK8EoLIt6M45zTApHOGzc"
+
+    # Adjust the prompt name for file search
+    prompt_formatted = prompt.replace(" ", "_")  # Replace spaces with underscores for filenames
+
+    # Define expected filenames for neutral and older images
+    neutral_filename = f"a_person_{prompt_formatted}.jpg"
+    older_filename = f"an_older_person_{prompt_formatted}.jpg"
+    
+    #st.write(f"Looking for images for prompt: {prompt_formatted}")
+
+    # Search for images in the "neutral" folder
+    neutral_image_query = f"'{neutral_folder_id}' in parents"
+    neutral_results = _drive_service.files().list(q=neutral_image_query, fields="files(id, name)").execute()
+    neutral_files = neutral_results.get('files', [])
+    
+    # Debug: Print all neutral files found
+    # st.write("Neutral images found in folder:")
+    # for file in neutral_files:
+    #     st.write(f"- {file['name']}")
+
+    # Find the specific file matching the prompt for neutral
+    neutral_file = next((file for file in neutral_files if file['name'] == neutral_filename), None)
+
+    # Search for images in the "older" folder
+    older_image_query = f"'{older_folder_id}' in parents"
+    older_results = _drive_service.files().list(q=older_image_query, fields="files(id, name)").execute()
+    older_files = older_results.get('files', [])
+    
+    # Debug: Print all older files found
+    # st.write("Older images found in folder:")
+    #   for file in older_files:
+    #     st.write(f"- {file['name']}")
+
+    # Find the specific file matching the prompt for older
+    older_file = next((file for file in older_files if file['name'] == older_filename), None)
+
+    # Check if the images are found
+    if neutral_file:
+        images['neutral'] = neutral_file  # Take the first image
+    if older_file:
+        images['older'] = older_file  # Take the first image
+
+    # Ensure both images exist, otherwise return an error
+    if 'neutral' not in images or 'older' not in images:
+        st.error(f"Error: No se encontraron imágenes para el prompt '{prompt_formatted}'. Asegúrate de que existan en Google Drive.")
+        return {}
+
+    return images
+
+############### SENSE DRIVE ###############
+# Función auxiliar para convertir una imagen a base64 (útil para preparar las imágenes)
+def image_to_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode()
+# Función auxiliar para guardar una imagen en base64
+def save_image_base64(image_path, output_file):
+    encoded = image_to_base64(image_path)
+    with open(output_file, 'w') as f:
+        f.write(encoded)
+
+class LocalImageHandler:
+    def __init__(self):
+        self.base_folder = Path("IMAGES")
+        self.prompts = [
+            "traveling",
+            "eating",
+            "planning shopping",
+            "taking a break",
+            "participating in sports events",
+            "receiving personal care services",
+            "using computers",
+            "in the living room",
+            "at work",
+            "in a job fair",
+            "handling home care tasks",
+            "managing the household",
+            "moving to a new location",
+            "in a study group",
+            "in a party",
+            "going for walks",
+            "heating the dwelling"
+        ]
+        
+    def get_image_path(self, prompt, image_type):
+        """
+        Obtiene la ruta de la imagen basada en el prompt y tipo
+        image_type puede ser 'neutral' o 'older'
+        """
+        prefix = "a_person_" if image_type == 'neutral' else "an_older_person_"
+        # Convertir el prompt a formato de nombre de archivo
+        formatted_prompt = prompt.replace(" ", "_")
+        filename = f"{prefix}{formatted_prompt}.jpg"  # o .jpg según el formato de tus imágenes
+        return self.base_folder / image_type / filename
+
+    def get_images_for_prompt(self, prompt):
+        """Obtiene las imágenes neutral y older para un prompt específico"""
+        return {
+            'neutral': {
+                'path': self.get_image_path(prompt, 'neutral'),
+                'name': f"Person {prompt}"
+            },
+            'older': {
+                'path': self.get_image_path(prompt, 'older'),
+                'name': f"Older person {prompt}"
+            }
+        }
+
+    def get_random_prompt(self):
+        """Obtiene un prompt aleatorio de la lista"""
+        return random.choice(self.prompts)
+
+prompts = [
+    "traveling",
+    "eating",
+    "planning shopping",
+    "taking a break",
+    "participating in sports events",
+    "receiving personal care services",
+    "using computers",
+    "in the living room",
+    "at work",
+    "in a job fair",
+    "handling home care tasks",
+    "managing the household",
+    "moving to a new location",
+    "in a study group",
+    "in a party",
+    "going for walks",
+    "heating the dwelling"]
+
+def initialize_session_state():
+    #"""Inicializa todas las variables del estado de la sesión"""
+    if 'page' not in st.session_state:
+        st.session_state.page = 'intro'
+    if 'current_step' not in st.session_state:
+        st.session_state.current_step = 1
+    if 'image_responses' not in st.session_state:
+        st.session_state.image_responses = {}
+    if 'image_handler' not in st.session_state:
+        st.session_state.image_handler = LocalImageHandler()
+    if 'current_prompt' not in st.session_state:
+        st.session_state.current_prompt = st.session_state.image_handler.get_random_prompt()
+
 def main():
+    # Inicializar el estado de la sesión
+    initialize_session_state()
+
+    # Inicializar rutas
+    intro_image = Path("IMAGES/Imagen_intro.png")
+    pdf_path = Path("TERMS/TERMS.pdf")
+
     drive_service, sheets_service = get_google_services()
-    
+
     if not drive_service or not sheets_service:
         st.error("No se pudieron obtener los servicios de Google.")
         return
@@ -397,145 +309,266 @@ def main():
     parent_folder_name = "10_14_FALLING_WALLS"
     spreadsheet_id = "1kkpKzDOkwJ58vgvp0IIAhS-yOSJxId8VJ4Bjxj7MmJk"
 
+    # Extraer el ID de la carpeta principal de Google Drive
     parent_folder_id = extract_folder_id(drive_url)
 
-    # Initialize session state variables
+    # Inicializar estado de sesión
     if 'page' not in st.session_state:
-        st.session_state.page = 'start'
+        st.session_state.page = 'intro'
+
     if 'current_step' not in st.session_state:
         st.session_state.current_step = 1
     if 'user_id' not in st.session_state:
         st.session_state.user_id = ''
-    if 'review_mode' not in st.session_state:
-        st.session_state.review_mode = False    
     if 'random_images' not in st.session_state:
         st.session_state.random_images = []
     if 'image_responses' not in st.session_state:
         st.session_state.image_responses = {}
+    if 'all_files' not in st.session_state:
+        st.session_state.all_files = []
 
+    st.write(f"Estado actual de la página: {st.session_state.page}")
+
+    # Cargar archivos desde Google Drive (solo CSV o PDF, no imágenes) Si el folder ID de Google Drive se ha encontrado
     if parent_folder_id:
+        # Buscar la carpeta de imágenes y el archivo CSV
         images_folder_id, csv_file_id = find_images_folder_and_csv_id(drive_service, parent_folder_name)
         if images_folder_id and csv_file_id:
-            image_list = list_images_in_folder(drive_service, images_folder_id)
+            current_prompt = random.choice(prompts)  # Selecciona un prompt aleatorio
+            images = get_images_for_prompt(drive_service, current_prompt)  # Implementa esta función
 
-            if not st.session_state.random_images:
-                st.session_state.random_images = random.sample(image_list, 6)  # 2 images per step, 3 steps
-
-            if st.session_state.page == 'start':
-                col1, col2, col3 = st.columns([1, 2, 1])
-
-                with col2:
-                    st.markdown("<h1 style='text-align: center;'>AGEAI - Falling Walls Summit</h1>", unsafe_allow_html=True)
-                    st.markdown("<p style='text-align: center;'>This tool is designed to help us collect data about images created with AI.</p>", unsafe_allow_html=True)
-                    st.markdown("<p style='text-align: center;'>You will be presented with a series of images and questions. Please answer them to the best of your ability.</p>", unsafe_allow_html=True)
-                    st.markdown("<p style='text-align: center;'>Your responses are valuable and will contribute to improving our findings.</p>", unsafe_allow_html=True)
-                    
-                    st.session_state.user_id = st.text_input('Please, enter your user ID (your email)', value=st.session_state.user_id)
-                    
-                    if st.session_state.user_id:
-                        _, button_col, _ = st.columns([1, 1, 1])
-                        with button_col:
-                            if st.button("Start Questionnaire"):
-                                st.session_state.page = 'questionnaire'
-                                st.rerun()
-                    else:
-                        st.warning("Please enter a user ID and click to start the questionnaire.")
-
-            elif st.session_state.page == 'questionnaire':
-                st.title(f"Step {st.session_state.current_step} of 3")
-                
-                col1, col2 = st.columns(2)
-
-                # Display two images side by side
-                for i in range(2):
-                    with col1 if i == 0 else col2:
-                        current_image = st.session_state.random_images[2*(st.session_state.current_step-1) + i]
-                        image_bytes = download_file_from_google_drive(drive_service, current_image['id'])
-                        st.image(image_bytes, use_column_width=True, caption=current_image['name'])
-
-                        st.subheader(f"Image {i+1}")
-                        tags = get_tags_for_step(st.session_state.current_step)
-                        selected_tags = []
-                        for tag in tags:
-                            if st.button(tag, key=f"step{st.session_state.current_step}_img{i}_{tag}"):
-                                selected_tags.append(tag)
-                        
-                        comments = st.text_area(f"Comments for Image {i+1}", key=f"step{st.session_state.current_step}_comments_{i}")
-                        
-                        # Store responses
-                        store_responses(current_image['id'], selected_tags, comments)
-
-                # Navigation
-                nav_col1, nav_col2, nav_col3 = st.columns([1, 1, 1])
-                
-                with nav_col1:
-                    if st.button("Previous Step") and st.session_state.current_step > 1:
-                        st.session_state.current_step -= 1
-                        st.rerun()
-
-                with nav_col2:
-                    st.write(f"<div style='text-align: center;'>Step {st.session_state.current_step} of 3</div>", unsafe_allow_html=True)
-
-                with nav_col3:
-                    if st.button("Next Step"):
-                        if st.session_state.current_step < 3:
-                            st.session_state.current_step += 1
-                        else:
-                            st.session_state.page = 'review'
-                            st.session_state.review_mode = True
-                        st.rerun()
-
-                st.progress(st.session_state.current_step / 3)
-
-                # Sidebar navigation
-                for step in range(1, 4):
-                    if st.sidebar.button(f"Step {step}", disabled=step > st.session_state.current_step):
-                        st.session_state.current_step = step
-                        st.rerun()
-
-            elif st.session_state.page == 'review':
-                st.title("Questionnaire completed")
-                st.write("You have completed all questions. You can review your answers or submit the questionnaire.")
-
-                if st.button("Review answers"):
-                    st.session_state.current_step = 1
-                    st.session_state.page = 'questionnaire'
-                    st.session_state.review_mode = True
-                    st.rerun()
-
-                if st.button("Submit questionnaire"):
-                    save_labels_to_google_sheets(
-                        sheets_service, 
-                        spreadsheet_id, 
-                        st.session_state.user_id, 
-                        st.session_state.image_responses
-                    )
-
-                    st.session_state.page = 'end'
-                    st.session_state.review_mode = False
-                    
-                    # Clear cache and image-related session state
-                    st.cache_data.clear()
-                    del st.session_state['random_images']
-                    del st.session_state['image_responses']
-
-                    st.rerun()
-
-            elif st.session_state.page == 'end':
-                st.title("Thanks for participating! 😊")
-                st.balloons()
-                st.write("Your responses have been saved and will be used to improve our AI systems.")
-                st.write("We appreciate your time and effort in completing this questionnaire.")
-                if st.button("Start New Questionnaire"):
-                    st.session_state.current_step = 1
-                    st.session_state.image_responses = {}
-                    st.session_state.page = 'start'
-                    st.session_state.user_id = ''
-                    st.session_state.review_mode = False
-                    st.rerun()
-
+            if 'neutral' in images and 'older' in images:
+                st.session_state.random_images = [images['neutral'], images['older']]
+            else:
+                st.error("No se encontraron imágenes adecuadas para el prompt.")
+            
+            if not st.session_state.all_files: # Crucial: Get all files, including the PDF
+                results = drive_service.files().list(
+                    q=f"'{parent_folder_id}' in parents",  # Query for files in the parent folder
+                    fields="nextPageToken, files(id, name, mimeType)"
+                ).execute()
+                st.session_state.all_files = results.get('files', [])                
+        else:
+            st.error("No se pudieron encontrar las imágenes o el archivo CSV.")  
     else:
         st.error("Could not obtain the parent folder ID.")
+
+    if st.session_state.page == 'intro':
+        st.write("Estado de página: intro")  # Mensaje de depuración
+
+        st.markdown("<h1 style='text-align: center;'>AGEAI Project</h1>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center;'>How age is depicted in Generative AI?</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center;'></h2>", unsafe_allow_html=True)
+
+        col1, col2 = st.columns([2, 2]) 
+
+        with col1:
+            st.write("In this experience, you'll explore AI-generated images using prompts in Midjourney. Your task is to identify how age is represented in relation to emotions, roles and autonomy, by selecting different tags in each image and by describing the differences between the two age groups depicted.")
+            st.write("At the end, the collective insights from all participants will be revealed.")
+            st.write("")
+            st.write("""
+                        **Terms and Conditions:**
+                        * This study is part of the Ageism AI project funded by VolksWagen Foundation.
+                        * Data is anonymous and will be used for scientific studies.
+                        * If you start, you accept to participate in the study (no personal information will be collected).
+                        """)
+
+        with col2:
+            #Cargar y mostrar la imagen
+            # intro_image_id = None
+            # for file in st.session_state.all_files:
+            #     if file['name'] == "Imagen_intro.png":
+            #         intro_image_id = file['id']
+            #         break
+
+            # if intro_image_id:
+            #     intro_image_bytes = download_file_from_google_drive(drive_service, intro_image_id)
+            #     if intro_image_bytes:
+            #         st.image(intro_image_bytes, width=300, use_column_width=False)  # Ajustar la imagen completamente a la columna
+
+            if intro_image.exists():
+                try:
+                    st.image(str(intro_image), width=300, use_column_width=False)
+                except Exception as e:
+                    st.error(f"Error al cargar la imagen: {str(e)}")
+            else:
+                st.error("Imagen de introducción no encontrada")
+
+        # Mostrar el archivo PDF de los términos y condiciones
+        # terms_pdf_id = None
+        # for file in st.session_state.all_files:
+        #     if file['name'] == "TERMS.pdf":
+        #         terms_pdf_id = file['id']
+        #         break
+
+        # if terms_pdf_id:
+        #     pdf_bytes = download_file_from_google_drive(drive_service, terms_pdf_id)
+        #     if pdf_bytes:
+        #         with st.expander("View the Terms and Conditions PDF below:", expanded=False):
+        #             display_pdf(pdf_bytes)  # Función para mostrar el PDF
+        if pdf_path.exists():
+            with st.expander("View the Terms and Conditions PDF below:", expanded=False):
+                display_pdf_from_file(pdf_path)
+        else:
+            st.error("Archivo PDF de términos y condiciones no encontrado")
+
+        # Checkbox y botón para aceptar los términos
+        agree = st.checkbox("I agree to the terms and conditions")
+        if agree:
+            if st.button("Start"):
+                st.session_state.page = 'prompt1'
+                st.rerun()
+
+    elif st.session_state.page == 'prompt1':
+        # Si current_prompt no está establecido, selecciona un prompt aleatorio
+        if 'current_prompt' not in st.session_state:
+            st.session_state.current_prompt = random.choice(prompts) 
+
+        current_prompt = st.session_state.current_prompt  # Usar el prompt guardado
+
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown(f"<h2 style='text-align: center;'>STEP {st.session_state.current_step} of 3</h2>", unsafe_allow_html=True)
+            st.markdown(f"<h3 style='text-align: center;'>How an older person and a person {current_prompt.replace('_', ' ')} are depicted in Midjourney?</h3>", unsafe_allow_html=True)
+            
+            st.markdown("""
+                <style>
+                div.stButton > button {
+                    display: block;
+                    margin: 0 auto;
+                    font-size: 20px;
+                    padding: 10px 40px;
+                    background-color: #4CAF50;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+
+            if st.button("Go!"):
+                st.session_state.page = 'questionnaire'
+                st.rerun()
+
+#QUESTIONNAIRE
+    elif st.session_state.page == 'questionnaire':
+        col1, col2, col3 = st.columns([2, 2, 1])
+        
+        # Obtener imágenes para el prompt actual
+        current_prompt = st.session_state.current_prompt   
+        #images = get_images_for_prompt(drive_service, current_prompt)
+        images = st.session_state.image_handler.get_images_for_prompt(current_prompt)
+
+        #if 'neutral' in images and 'older' in images:
+        for i, (key, image_data) in enumerate(images.items()):
+                    column = col1 if i == 0 else col2
+                    with column:
+                        if image_data['path'].exists():
+                            image = Image.open(image_data['path'])
+                            st.image(image, width=400, caption=image_data['name'])
+                        else:
+                            st.error(f"Image not found: {image_data['path']}")
+                        
+                        image_id = str(image_data['path'])
+                        step_key = f"Step {st.session_state.current_step}"
+
+                        if image_id not in st.session_state.image_responses:
+                            st.session_state.image_responses[image_id] = {}
+
+                        if step_key not in st.session_state.image_responses[image_id]:
+                            st.session_state.image_responses[image_id][step_key] = {"Tags": [], "Comments": ""}
+
+                        # Tags
+                        tags = {
+                            1: ["Vulnerable", "Strong", "Hallucinated", "Realistic", "Passive", "Active",
+                                "Limited", "Empowered", "Funny", "Worried"],
+                            2: ["Vulnerable", "Strong", "Hallucinated", "Realistic", "Passive", "Active",
+                                "Limited", "Empowered", "Funny", "Worried"],
+                            3: ["Vulnerable", "Strong", "Hallucinated", "Realistic", "Passive", "Active",
+                                "Limited", "Empowered", "Funny", "Worried"],
+                        }
+
+                        btn_cols = st.columns(2)
+
+                        for j, tag in enumerate(tags[st.session_state.current_step]):
+                            with btn_cols[j % 2]:
+                                button_key = f"tag_button_{st.session_state.current_step}_{i}_{j}"
+                                if st.button(tag, key=button_key, use_container_width=True):
+                                    if tag not in st.session_state.image_responses[image_id][step_key]["Tags"]:
+                                        st.session_state.image_responses[image_id][step_key]["Tags"].append(tag)
+                                    else:
+                                        st.session_state.image_responses[image_id][step_key]["Tags"].remove(tag)
+
+                        # Textbox individual para cada imagen
+                        label = "Submit another word for left image:" if i == 0 else "Submit another word for right image:"
+                        comment = st.text_area(
+                            label, 
+                            key=f"comments_step{st.session_state.current_step}_img{i}",
+                            placeholder="Write here",
+                            height=50)
+
+                        st.markdown(f"""
+                        <style>
+                            #{f"comments_step{st.session_state.current_step}_img{i}"} {{
+                                height: 30px !important;
+                                width: 200px !important;
+                                font-size: 0.8em !important;
+                            }}
+                        </style>
+                        """, unsafe_allow_html=True)
+
+                        # Guardar el comentario en el estado de sesión
+                        st.session_state.image_responses[image_id][step_key]["Comments"] = comment
+
+                        # Columna estrecha a la derecha
+        with col3:
+            # Añadir espacios en blanco para alinear con los botones de las otras columnas
+            for _ in range(20):  # Ajusta este número según sea necesario
+                st.write("")
+            
+            # Texto "Step x of 3"
+            st.markdown(f"<h2 style='text-align: center;'>Step {st.session_state.current_step} of 3</h2>", unsafe_allow_html=True)
+            
+            # Botón para avanzar al siguiente step
+            # button_label = "Next Images" if st.session_state.current_step < 3 else "Finish"
+            # if st.button(button_label, key=f"next_button_step{st.session_state.current_step}_unique", use_container_width=True):
+            #     if st.session_state.current_step < 3:
+            #         st.session_state.current_step += 1
+            #         st.session_state.current_prompt = random.choice(prompts)
+            #     else:
+            #         st.session_state.page = 'end'  # Cambiar a la página de finalización
+            #     st.session_state.page = 'prompt1'
+            #     st.rerun()
+            button_label = "Next Images" if st.session_state.current_step < 3 else "Finish"
+            if st.button(button_label, key=f"next_button_step{st.session_state.current_step}_unique", use_container_width=True):
+                if st.session_state.current_step < 3:
+                    st.session_state.current_step += 1
+                    st.session_state.current_prompt = random.choice(prompts)  # Cambiar el prompt para el siguiente paso
+                else:
+                    st.session_state.page = 'end'  # Cambiar a la página de finalización
+                    st.session_state.current_step = 1  # Reiniciar el paso si es necesario para un nuevo flujo
+                    st.session_state.current_prompt = random.choice(prompts)  # Seleccionar un nuevo prompt
+
+                # Regresar a la página de prompt1 para mostrar el nuevo prompt
+                if st.session_state.page != 'end':  # Solo redirigir si no estamos en la página de finalización
+                    st.session_state.page = 'prompt1'
+                st.rerun()
+
+# Página final de agradecimiento
+    elif st.session_state.page == 'end':
+        st.title("Thanks for participating! 😊")
+        st.balloons()
+        st.write("Your responses have been saved.")
+        st.write("We appreciate your time and effort in completing this questionnaire.")
+        if st.button("Start New Questionnaire"):
+            # Reiniciar el cuestionario para una nueva sesión
+            st.session_state.current_step = 1
+            st.session_state.image_responses = {}
+            st.session_state.page = 'intro'
+            st.session_state.user_id = ''
+            st.session_state.review_mode = False
+            st.rerun()            
 
 if __name__ == "__main__":
     main()
