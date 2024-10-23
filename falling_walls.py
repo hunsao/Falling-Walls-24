@@ -415,7 +415,8 @@ def main():
     if parent_folder_id:
         # Buscar la carpeta de imágenes y el archivo CSV
         images_folder_id, csv_file_id = find_images_folder_and_csv_id(drive_service, parent_folder_name)
-        if images_folder_id and csv_file_id:
+        # Verificar que la carpeta de imágenes fue encontrada (no se considera el CSV)
+        if images_folder_id: #and csv_file_id:
             current_prompt = random.choice(prompts)  # Selecciona un prompt aleatorio
             images = get_images_for_prompt(drive_service, current_prompt)  # Implementa esta función
 
@@ -431,7 +432,7 @@ def main():
                 ).execute()
                 st.session_state.all_files = results.get('files', [])                
         else:
-            st.error("No se pudieron encontrar las imágenes o el archivo CSV.")  
+            st.error("No se pudieron encontrar las imágenes")  #o el archivo CSV.
     else:
         st.error("Could not obtain the parent folder ID.")
 
