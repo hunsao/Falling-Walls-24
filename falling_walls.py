@@ -99,8 +99,8 @@ def find_images_folder_and_csv_id(service, parent_folder_name):
             elif item['name'].endswith('.csv') and item['mimeType'] == 'text/csv':
                 csv_file_id = item['id']
         if not images_folder_id:
-            #st.error("No se encontró la carpeta 'IMAGES'.")
-        if not csv_file_id:
+            st.error("No se encontró la carpeta 'IMAGES'.")
+        #if not csv_file_id:
             #st.error("No se encontró el archivo CSV.")
         return images_folder_id, csv_file_id
     except Exception as e:
