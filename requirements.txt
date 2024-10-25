@@ -9,4 +9,3 @@ streamlit==1.38.0
 
 streamlit-navigation-bar
 streamlit-carousel
-streamlit.components.v1
