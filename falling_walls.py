@@ -1,4 +1,8 @@
 import streamlit as st
+from streamlit_navigation_bar import st_navbar
+from streamlit_carousel import carousel
+import streamlit.components.v1 as components
+
 
 import io
 import os
@@ -18,6 +22,151 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload, HttpRequest
 from googleapiclient.errors import HttpError
+
+particles_js = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Particles.js</title>
+  <style>
+  #particles-js {
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+    top: 0;
+    left: 0;
+    z-index: -1; /* Send the animation to the back */
+  }
+  .content {
+    position: relative;
+    z-index: 1;
+    color: white;
+  }
+  
+</style>
+</head>
+<body>
+  <div id="particles-js"></div>
+  <div class="content">
+    <!-- Placeholder for Streamlit content -->
+  </div>
+  <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+  <script>
+    particlesJS("particles-js", {
+      "particles": {
+        "number": {
+          "value": 300,
+          "density": {
+            "enable": true,
+            "value_area": 800
+          }
+        },
+        "color": {
+          "value": "#ffffff"
+        },
+        "shape": {
+          "type": "circle",
+          "stroke": {
+            "width": 0,
+            "color": "#000000"
+          },
+          "polygon": {
+            "nb_sides": 5
+          },
+          "image": {
+            "src": "img/github.svg",
+            "width": 100,
+            "height": 100
+          }
+        },
+        "opacity": {
+          "value": 0.5,
+          "random": false,
+          "anim": {
+            "enable": false,
+            "speed": 1,
+            "opacity_min": 0.2,
+            "sync": false
+          }
+        },
+        "size": {
+          "value": 2,
+          "random": true,
+          "anim": {
+            "enable": false,
+            "speed": 40,
+            "size_min": 0.1,
+            "sync": false
+          }
+        },
+        "line_linked": {
+          "enable": true,
+          "distance": 100,
+          "color": "#ffffff",
+          "opacity": 0.22,
+          "width": 1
+        },
+        "move": {
+          "enable": true,
+          "speed": 0.2,
+          "direction": "none",
+          "random": false,
+          "straight": false,
+          "out_mode": "out",
+          "bounce": true,
+          "attract": {
+            "enable": false,
+            "rotateX": 600,
+            "rotateY": 1200
+          }
+        }
+      },
+      "interactivity": {
+        "detect_on": "canvas",
+        "events": {
+          "onhover": {
+            "enable": true,
+            "mode": "grab"
+          },
+          "onclick": {
+            "enable": true,
+            "mode": "repulse"
+          },
+          "resize": true
+        },
+        "modes": {
+          "grab": {
+            "distance": 100,
+            "line_linked": {
+              "opacity": 1
+            }
+          },
+          "bubble": {
+            "distance": 400,
+            "size": 2,
+            "duration": 2,
+            "opacity": 0.5,
+            "speed": 1
+          },
+          "repulse": {
+            "distance": 200,
+            "duration": 0.4
+          },
+          "push": {
+            "particles_nb": 2
+          },
+          "remove": {
+            "particles_nb": 3
+          }
+        }
+      },
+      "retina_detect": true
+    });
+  </script>
+</body>
+</html>
+"""
 
 st.set_page_config(
     page_title="Falling Walls Summit '24",
@@ -140,7 +289,7 @@ def list_images_in_folder(_service, folder_id):
         return []
 
 @st.cache_data()
-def get_images_for_prompt(_drive_service, prompt):
+def get_images_for_prompt_drive(_drive_service, prompt):
     images = {}
     
     # Folder IDs for "neutral" and "older"
@@ -191,6 +340,39 @@ def get_images_for_prompt(_drive_service, prompt):
     # Ensure both images exist, otherwise return an error
     if 'neutral' not in images or 'older' not in images:
         st.error(f"Error: No se encontraron imágenes para el prompt '{prompt_formatted}'. Asegúrate de que existan en Google Drive.")
+        return {}
+
+    return images
+
+#@st.cache_data()
+def get_images_for_prompt(prompt):
+    images = {}
+    
+    # Adjust the prompt name for file search
+    prompt_formatted = prompt.replace(" ", "_")  # Replace spaces with underscores for filenames
+
+    # Define expected filenames for neutral and older images
+    neutral_filename = f"a_person_{prompt_formatted}.jpg"
+    older_filename = f"an_older_person_{prompt_formatted}.jpg"
+    
+    # Folder IDs for "neutral" and "older"
+    neutral_image_path = Path(__file__).parent / "IMAGES" / "neutral" / neutral_filename
+    older_image_path = Path(__file__).parent / "IMAGES" / "older" / older_filename
+
+    # Verificar si las imágenes existen en las rutas especificadas
+    if os.path.exists(neutral_image_path):
+        images['neutral'] = Image.open(neutral_image_path)  # Cargar la imagen neutral
+    else:
+        st.warning(f"No se encontró la imagen neutral para el prompt '{prompt_formatted}'.")
+
+    if os.path.exists(older_image_path):
+        images['older'] = Image.open(older_image_path)  # Cargar la imagen older
+    else:
+        st.warning(f"No se encontró la imagen older para el prompt '{prompt_formatted}'.")
+
+    # Asegurarse de que ambas imágenes existan, de lo contrario retornar error
+    if 'neutral' not in images or 'older' not in images:
+        st.error(f"Error: No se encontraron ambas imágenes para el prompt '{prompt_formatted}'.")
         return {}
 
     return images
@@ -289,7 +471,7 @@ def save_image_base64(image_path, output_file):
 
 class LocalImageHandler:
     def __init__(self):
-        self.base_folder = Path("IMAGES")
+        self.base_folder = Path(__file__).parent / "IMAGES"  # Definir la ruta base de la carpeta IMAGES
         self.prompts = [
             "traveling",
             "eating",
@@ -312,18 +494,19 @@ class LocalImageHandler:
         
     def get_image_path(self, prompt, image_type):
         """
-        Obtiene la ruta de la imagen basada en el prompt y tipo
-        image_type puede ser 'neutral' o 'older'
+        Obtiene la ruta de la imagen basada en el prompt y tipo.
+        `image_type` puede ser 'neutral' o 'older'.
         """
         prefix = "a_person_" if image_type == 'neutral' else "an_older_person_"
         # Convertir el prompt a formato de nombre de archivo
         formatted_prompt = prompt.replace(" ", "_")
-        filename = f"{prefix}{formatted_prompt}.jpg"  # o .jpg según el formato de tus imágenes
-        return self.base_folder / image_type / filename
+        filename = f"{prefix}{formatted_prompt}.jpg"
+        image_path = self.base_folder / image_type / filename
+        return image_path if image_path.is_file() else None
 
     def get_images_for_prompt(self, prompt):
-        """Obtiene las imágenes neutral y older para un prompt específico"""
-        return {
+        """Obtiene las imágenes neutral y older para un prompt específico si existen."""
+        images = {
             'neutral': {
                 'path': self.get_image_path(prompt, 'neutral'),
                 'name': f"Person {prompt}"
@@ -333,10 +516,34 @@ class LocalImageHandler:
                 'name': f"Older person {prompt}"
             }
         }
+        
+        # Filtrar imágenes que no se encuentran
+        missing_images = [key for key, val in images.items() if val['path'] is None]
+        if missing_images:
+            missing_str = ", ".join(missing_images)
+            raise FileNotFoundError(f"Error: No se encontraron imágenes para: {missing_str}. Prompt: '{prompt}'.")
+
+        return images
 
     def get_random_prompt(self):
         """Obtiene un prompt aleatorio de la lista"""
         return random.choice(self.prompts)
+
+def initialize_session_state():
+    if 'page' not in st.session_state:
+        st.session_state.page = 'landing' #intro
+    if 'current_step' not in st.session_state:
+        st.session_state.current_step = 1
+    if 'image_responses' not in st.session_state:
+        st.session_state.image_responses = {}
+    if 'image_handler' not in st.session_state:
+        st.session_state.image_handler = LocalImageHandler()
+    if 'current_prompt' not in st.session_state:
+        st.session_state.current_prompt = st.session_state.image_handler.get_random_prompt()
+    if 'user_id' not in st.session_state:
+        st.session_state.user_id = str(uuid.uuid4())  # Generar ID único
+    if 'user_age' not in st.session_state:
+        st.session_state.user_age = None
 
 prompts = [
     "traveling",
@@ -357,29 +564,23 @@ prompts = [
     "going for walks",
     "heating the dwelling"]
 
-def initialize_session_state():
-    if 'page' not in st.session_state:
-        st.session_state.page = 'intro'
-    if 'current_step' not in st.session_state:
-        st.session_state.current_step = 1
-    if 'image_responses' not in st.session_state:
-        st.session_state.image_responses = {}
-    if 'image_handler' not in st.session_state:
-        st.session_state.image_handler = LocalImageHandler()
-    if 'current_prompt' not in st.session_state:
-        st.session_state.current_prompt = st.session_state.image_handler.get_random_prompt()
-    if 'user_id' not in st.session_state:
-        st.session_state.user_id = str(uuid.uuid4())  # Generar ID único
-    if 'user_age' not in st.session_state:
-        st.session_state.user_age = None
+enable_scroll = """
+<style>
+.main {
+    overflow: auto;
+}
+</style>
+"""
 
 def main():
     # Inicializar el estado de la sesión
     initialize_session_state()
 
     # Inicializar rutas
-    intro_image = Path("IMAGES/Imagen_intro.png")
-    pdf_path = Path("TERMS/TERMS.pdf")
+    #intro_image = Path("IMAGES/Imagen_intro.png")
+    intro_image = Path(__file__).parent / "IMAGES" / "Imagen_intro.png"
+    #pdf_path = Path("TERMS/TERMS.pdf")
+    pdf_path = Path(__file__).parent / "TERMS" / "TERMS.pdf"
 
     drive_service, sheets_service = get_google_services()
 
@@ -396,7 +597,7 @@ def main():
 
     # Inicializar estado de sesión
     if 'page' not in st.session_state:
-        st.session_state.page = 'intro'
+        st.session_state.page = 'landing' #intro
 
     if 'current_step' not in st.session_state:
         st.session_state.current_step = 1
@@ -418,8 +619,8 @@ def main():
         # Verificar que la carpeta de imágenes fue encontrada (no se considera el CSV)
         if images_folder_id: #and csv_file_id:
             current_prompt = random.choice(prompts)  # Selecciona un prompt aleatorio
-            images = get_images_for_prompt(drive_service, current_prompt)  # Implementa esta función
-
+            #images = get_images_for_prompt(drive_service, current_prompt)  #DRIVE
+            images = get_images_for_prompt(current_prompt)  # Implementa esta función
             if 'neutral' in images and 'older' in images:
                 st.session_state.random_images = [images['neutral'], images['older']]
             else:
@@ -436,92 +637,162 @@ def main():
     else:
         st.error("Could not obtain the parent folder ID.")
 
+##########################################################################################################
+# Página de landing
+    if st.session_state.page == 'landing':
+        #st.title("Welcome to the Ageism AI Project")
+
+        components.html(particles_js, height=0, scrolling=False)
+
+        st.markdown("<h1 style='text-align: center;'>Welcome to the Ageism AI Project</h1>", unsafe_allow_html=True)
+        st.markdown("<h5 style='text-align: center;'>In this experience, you'll explore AI-generated images and analyze how age is represented. This study is part of the Ageism AI project funded by Volkswagen Foundation.</h5>", unsafe_allow_html=True)
+
+        test_items = [
+            dict(
+                title="Slide 1",
+                text="A tree in the savannah",
+                img="https://img.freepik.com/free-photo/wide-angle-shot-single-tree-growing-clouded-sky-during-sunset-surrounded-by-grass_181624-22807.jpg?w=1380&t=st=1688825493~exp=1688826093~hmac=cb486d2646b48acbd5a49a32b02bda8330ad7f8a0d53880ce2da471a45ad08a4",
+                link="https://discuss.streamlit.io/t/new-component-react-bootstrap-carousel/46819",
+            ),
+            dict(
+                title="Slide 2",
+                text="A wooden bridge in a forest in Autumn",
+                img="https://img.freepik.com/free-photo/beautiful-wooden-pathway-going-breathtaking-colorful-trees-forest_181624-5840.jpg?w=1380&t=st=1688825780~exp=1688826380~hmac=dbaa75d8743e501f20f0e820fa77f9e377ec5d558d06635bd3f1f08443bdb2c1",
+                link="https://github.com/thomasbs17/streamlit-contributions/tree/master/bootstrap_carousel",
+            ),
+            dict(
+                title="Slide 3",
+                text="A distant mountain chain preceded by a sea",
+                img="https://img.freepik.com/free-photo/aerial-beautiful-shot-seashore-with-hills-background-sunset_181624-24143.jpg?w=1380&t=st=1688825798~exp=1688826398~hmac=f623f88d5ece83600dac7e6af29a0230d06619f7305745db387481a4bb5874a0",
+                link="https://github.com/thomasbs17/streamlit-contributions/tree/master",
+            ),
+            dict(
+                title="Slide 4",
+                text="PANDAS",
+                img="pandas.webp",
+            ),
+            dict(
+                title="Slide 4",
+                text="CAT",
+                img="cat.jpg",
+            ),
+        ]
+
+        carousel(items=test_items)
+        
+        st.markdown("""
+        <style>
+        div.stButton > button:focus, /* Añadido :focus */
+        div.stButton > button:active {
+            background-color: #1a5d9c;
+            color: white !important; /* Añadido !important */
+            border: none !important;
+            outline: none; /* Evita el contorno azul por defecto */
+            box-shadow: none !important;
+        }
+
+        div.stButton > button {  /* Mayor especificidad para :hover */
+            display: block;
+            margin: 0 auto;
+            font-size: 20px;
+            padding: 10px 40px;
+            background-color: #2986cc;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+
+        }
+        div.stButton > button:hover {
+            background-color: #1a5d9c;
+            color: #F0FFFF !important; /* color al pasar el cursor  */
+            border: none;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        if st.button("Go to Introduction", key="intro_button", use_container_width=False):
+        # if st.button("Go to Introduction"):
+            st.session_state.page = 'intro'
+            st.rerun()
+
     if st.session_state.page == 'intro':
+
+        components.html(particles_js, height=150, scrolling=False)
+
         #st.write("Estado de página: intro")  # Mensaje de depuración
+        #st.markdown("<h1 style='text-align: center;'>AGEAI Project</h1>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center;'>How is age depicted in Generative AI?</h2>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center;'></h4>", unsafe_allow_html=True)
 
-        st.markdown("<h1 style='text-align: center;'>AGEAI Project</h1>", unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align: center;'>How age is depicted in Generative AI?</h2>", unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align: center;'></h2>", unsafe_allow_html=True)
+        #col1, col2 = st.columns([2, 2]) 
 
-        col1, col2 = st.columns([2, 2]) 
+        #with col1:
+        #st.write("In this experience, you'll explore AI-generated images using prompts in Midjourney. Your task is to identify how age is represented in relation to emotions, roles and autonomy, by selecting different tags in each image and by describing the differences between the two age groups depicted.")
+        #st.write("At the end, the collective insights from all participants will be revealed.")
 
-        with col1:
-            st.write("In this experience, you'll explore AI-generated images using prompts in Midjourney. Your task is to identify how age is represented in relation to emotions, roles and autonomy, by selecting different tags in each image and by describing the differences between the two age groups depicted.")
-            st.write("At the end, the collective insights from all participants will be revealed.")
-            st.write("")
-            st.write("""
-                        **Terms and Conditions:**
-                        * This study is part of the Ageism AI project funded by VolksWagen Foundation.
-                        * Data is anonymous and will be used for scientific studies.
-                        * If you start, you accept to participate in the study (no personal information will be collected).
-                        """)
-
-        with col2:
-            if intro_image.exists():
-                try:
-                    st.image(str(intro_image), width=300, use_column_width=False)
-                except Exception as e:
-                    st.error(f"Error al cargar la imagen: {str(e)}")
-            else:
-                st.error("Imagen de introducción no encontrada")
-
-        if pdf_path.exists():
-            with st.expander("View the Terms and Conditions PDF below:", expanded=False):
-                display_pdf_from_file(pdf_path)
-        else:
-            st.error("Archivo PDF de términos y condiciones no encontrado")
-
-        # Checkbox y botón para aceptar los términos
-        agree = st.checkbox("I agree to the terms and conditions")
-        if agree:
-
-            st.markdown("""
-            <style>
-            div.stButton > button {
-                display: block;
-                margin: 0 auto;
-                font-size: 20px;
-                padding: 10px 40px;
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-
-            if st.button("Start"):
-                #st.session_state.page = 'prompt1'
-                st.session_state.page = 'age_input' 
-                st.rerun()
-
-# Nueva página para introducir la edad
-    elif st.session_state.page == 'age_input':
-        st.markdown("<h2 style='text-align: center;'>How old are you? (optional)</h2>", unsafe_allow_html=True)
-        #user_age = st.text_input("", value="", placeholder="...")  # Campo de texto para la edad (opcional)
-        user_age = st.number_input("Enter your age")  # Campo de texto para la edad (opcional)
+        # with col2:
+        #     if intro_image.exists():
+        #         try:
+        #             st.image(str(intro_image), width=250, use_column_width=False)
+        #         except Exception as e:
+        #             st.error(f"Error al cargar la imagen: {str(e)}")
+        #     else:
+        #         st.error("Imagen de introducción no encontrada")
+        
+        #st.write(f"Ruta absoluta de la imagen: {intro_image.resolve()}")
 
         st.markdown("""
-            <style>
-            div.stButton > button {
-                display: block;
-                margin: 0 auto;
-                font-size: 20px;
-                padding: 10px 40px;
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-        
-        # Botón de continuar
-        if st.button("Go!"):
-            st.session_state.user_age = user_age  # Guardar la edad (aunque puede estar en blanco)
-            st.session_state.page = 'prompt1'  # Cambiar a la siguiente página
+        <center>
+        <h5>In this experience, you'll explore AI-generated images using prompts in Midjourney. 
+        Your task is to identify how age is represented in relation to emotions, roles and autonomy, 
+        by selecting different tags in each image and by describing the differences between the two age groups depicted. 
+        </h5>
+        </center>
+        """, unsafe_allow_html=True)
+
+        st.write("")  # Mensaje de depuración
+
+        st.markdown("""
+        <center>
+        <h5>At the end, the collective insights from all participants will be revealed.</h5>
+        </center>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <style>
+        div.stButton > button:focus, /* Añadido :focus */
+        div.stButton > button:active {
+            background-color: #1a5d9c;
+            color: white !important; /* Añadido !important */
+            border: none !important;
+            outline: none; /* Evita el contorno azul por defecto */
+            box-shadow: none !important;
+        }
+
+        div.stButton > button {  /* Mayor especificidad para :hover */
+            display: block;
+            margin: 0 auto;
+            font-size: 20px;
+            padding: 10px 40px;
+            background-color: #2986cc;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+
+        }
+        div.stButton > button:hover {
+            background-color: #1a5d9c;
+            color: #F0FFFF !important; /* color al pasar el cursor  */
+            border: none;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        if st.button("Start"):
+            #st.session_state.page = 'age_input' 
+            st.session_state.page = 'prompt1'   
             st.rerun()
 
     elif st.session_state.page == 'prompt1':
@@ -534,31 +805,58 @@ def main():
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.markdown(f"<h2 style='text-align: center;'>STEP {st.session_state.current_step} of 3</h2>", unsafe_allow_html=True)
-            st.markdown(f"<h3 style='text-align: center;'>How an older person and a person {current_prompt.replace('_', ' ')} are depicted in Midjourney?</h3>", unsafe_allow_html=True)
+            st.markdown(f"<h4 style='text-align: center;'>How an older person and a person {current_prompt.replace('_', ' ')} are depicted in Midjourney ?</h4>", unsafe_allow_html=True)
             
             st.markdown("""
-                <style>
-                div.stButton > button {
-                    display: block;
-                    margin: 0 auto;
-                    font-size: 20px;
-                    padding: 10px 40px;
-                    background-color: #4CAF50;
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    cursor: pointer;
-                }
-                </style>
-                """, unsafe_allow_html=True)
+            <style>
+            div.stButton > button:focus, /* Añadido :focus */
+            div.stButton > button:active {
+                background-color: #1a5d9c;
+                color: white !important; /* Añadido !important */
+                border: none !important;
+                outline: none; /* Evita el contorno azul por defecto */
+                box-shadow: none !important;
+            }
+
+            div.stButton > button {  /* Mayor especificidad para :hover */
+                display: block;
+                margin: 0 auto;
+                font-size: 20px;
+                padding: 10px 40px;
+                background-color: #2986cc;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+
+            }
+            div.stButton > button:hover {
+                background-color: #1a5d9c;
+                color: #F0FFFF !important; /* color al pasar el cursor  */
+                border: none;
+            }
+            </style>
+            """, unsafe_allow_html=True)
 
             if st.button("Go!"):
                 st.session_state.page = 'questionnaire'
                 st.rerun()
 
+        components.html(particles_js, height=350,width=1000, scrolling=False)
+
+
 #QUESTIONNAIRE
     elif st.session_state.page == 'questionnaire':
-        st.title(f"Prompt: Person / Older person {st.session_state.current_prompt.replace('_', ' ')}")
+        st.markdown(
+        """
+        <style>
+        #root > div:nth-child(1) > div > div > div > div > section > div {
+            padding-top: 0rem;
+        }
+        </style>
+        """, 
+        unsafe_allow_html=True)
+        #st.title(f"Prompt: Person / Older person {st.session_state.current_prompt.replace('_', ' ')}")
         col1, col2, col3 = st.columns([2, 2, 1])
         # Obtener imágenes para el prompt actual
         current_prompt = st.session_state.current_prompt   
@@ -570,7 +868,7 @@ def main():
                     with column:
                         if image_data['path'].exists():
                             image = Image.open(image_data['path'])
-                            st.image(image, width=400, caption=image_data['name'])
+                            st.image(image, width=400,caption=f"Prompt: {image_data['name']}") #caption=image_data['name'])
                         else:
                             st.error(f"Image not found: {image_data['path']}")
                         
@@ -586,25 +884,24 @@ def main():
                         # Tags
                         tags = {
                             1: ["Vulnerable", "Strong", "Hallucinated", "Realistic", "Passive", "Active",
-                                "Limited", "Empowered", "Funny", "Worried"],
+                                "With limitations", "Capable", "Relaxed", "Worried"],
                             2: ["Vulnerable", "Strong", "Hallucinated", "Realistic", "Passive", "Active",
-                                "Limited", "Empowered", "Funny", "Worried"],
+                                "With limitations", "Capable", "Relaxed", "Worried"],
                             3: ["Vulnerable", "Strong", "Hallucinated", "Realistic", "Passive", "Active",
-                                "Limited", "Empowered", "Funny", "Worried"],
+                                "With limitations", "Capable", "Relaxed", "Worried"],
                         }
 
                         # Crear el multiselect encima de los botones
                         selected_tags = st.session_state.image_responses[image_id][step_key]["Tags"]
 
-                        # Multiselect para mostrar las selecciones actuales
-                        #multiselect_key = f"multiselect_tags_{st.session_state.current_step}_{i}"
+                        # selected = st.multiselect(
+                        #     "Selected Tags",
+                        #     options=tags[st.session_state.current_step],
+                        #     default=selected_tags,  # Usar la lista de etiquetas seleccionadas como por defecto
+                        #     key=f"multiselect_{image_id}_{st.session_state.current_step}"  # Clave única
+                        # )
 
-                        selected = st.multiselect(
-                            "Selected Tags",
-                            options=tags[st.session_state.current_step],
-                            default=selected_tags,  # Usar la lista de etiquetas seleccionadas como por defecto
-                            key=f"multiselect_{image_id}_{st.session_state.current_step}"  # Clave única
-                        )
+                        selected = selected_tags #AFEGIT PER LO D'ADALT
 
                         # Actualizar el estado de las etiquetas en función del multiselect
                         st.session_state.image_responses[image_id][step_key]["Tags"] = selected
@@ -612,22 +909,61 @@ def main():
                         btn_cols = st.columns(2)
 
                         # Primero, agregamos el CSS personalizado al inicio de la app
+                        # st.markdown("""
+                        # <style>
+                        #     /* Estilo para botones no seleccionados */
+                        #     .stButton > button {
+                        #         color: white;
+                        #         background-color: #2986cc;
+                        #         border: 1px solid white;
+                        #         width: 100%;
+                        #     }
+                            
+                        #     /* Estilo para botones seleccionados */
+                        #     .stButton > button[kind=secondary] {
+                        #         background-color: #28a745cc;
+                        #         color: white;
+                        #         border: 1px solid white;
+                        #     }
+                        # </style>
+                        # """, unsafe_allow_html=True)
+
                         st.markdown("""
                         <style>
-                            /* Estilo para botones no seleccionados */
-                            .stButton > button {
-                                color: white;
-                                background-color: #28a745;
-                                border: 1px solid #ccc;
-                                width: 100%;
-                            }
-                            
-                            /* Estilo para botones seleccionados */
-                            .stButton > button[kind=secondary] {
-                                background-color: red;
-                                color: white;
-                                border: 1px solid white;
-                            }
+                        div.stButton > button:focus, /* Añadido :focus */
+                        div.stButton > button:active {
+                            background-color: #1a5d9c;
+                            color: white !important; /* Añadido !important */
+                            border: none !important;
+                            outline: none; /* Evita el contorno azul por defecto */
+                            box-shadow: none !important;
+                        }
+
+                        div.stButton > button {  /* Mayor especificidad para :hover */
+                            display: block;
+                            margin: 0 auto;
+                            font-size: 20px;
+                            padding: 10px 40px;
+                            background-color: #2986cc;
+                            color: white;
+                            border: none;
+                            border-radius: 8px;
+                            cursor: pointer;
+
+                        }
+                        div.stButton > button:hover {
+                            background-color: #1a5d9c;
+                            color: #F0FFFF !important; /* color al pasar el cursor  */
+                            border: none;
+                        }
+                        /* Estilo para botones seleccionados */
+                        .stButton > button[kind=secondary] {
+                            background-color: #28a745cc;
+                            color: white;
+                            border: 1px solid white;
+                        }
+                                    
+                        button[kind=secondary]
                         </style>
                         """, unsafe_allow_html=True)
 
@@ -657,7 +993,7 @@ def main():
                         # Formulario individual para cada imagen
                         form = st.form(key=f'form_step{st.session_state.current_step}_img{i}')
                         comment = form.text_input(
-                            label='Submit another word for this image:',
+                            label='(Optional) Describe the image in other words (20 characters):',
                             placeholder="Write here"
                         )
                         submit_button = form.form_submit_button(label='Submit')
@@ -675,20 +1011,22 @@ def main():
                                     st.session_state.image_responses[image_id][step_key]["Words"] = words_list
 
                         # Mostrar el multiselect con las palabras escritas
-                        words_list = st.session_state.image_responses[image_id][step_key].get("Words", [])
-                        st.multiselect(
-                            "Submitted Words",  # Etiqueta para el multiselect de palabras
-                            options=words_list,
-                            key=f"words_multiselect_{image_id}_{st.session_state.current_step}",  # Clave única
-                            default=words_list
-                        )
+                        # words_list = st.session_state.image_responses[image_id][step_key].get("Words", [])
+                        # st.multiselect(
+                        #     "Submitted Words",  # Etiqueta para el multiselect de palabras
+                        #     options=words_list,
+                        #     key=f"words_multiselect_{image_id}_{st.session_state.current_step}",  # Clave única
+                        #     default=words_list
+                        # )
 
         # Columna estrecha a la derecha
         with col3:
             # Añadir espacios en blanco para alinear con los botones de las otras columnas
-            for _ in range(40):  
-                st.write("")
+            # for _ in range(46):  
+            #     st.write("")
             
+            components.html(particles_js, height=800,width=250, scrolling=False)
+
             # Texto "Step x of 3"
             st.markdown(f"<h2 style='text-align: center;'>Step {st.session_state.current_step} of 3</h2>", unsafe_allow_html=True)
             
@@ -710,17 +1048,39 @@ def main():
 # # Página final de agradecimiento
     elif st.session_state.page == 'end':
         try:
-            # Debugging: Mostrar datos que se intentarán guardar
-            #st.write("Attempting to save the following data:")
-            #st.write(f"User ID: {st.session_state.user_id}")
-            #st.write(f"User Age: {st.session_state.get('user_age', 'Not provided')}")
+            # Mensaje de agradecimiento
+            st.title("Thanks for participating! 😊")
+            st.balloons()
+            st.write("Your responses have been saved.")
+            st.write("We appreciate your time and effort in completing this questionnaire.")
             
-            # Preparar los datos para Google Sheets
+            # Mostrar Términos y Condiciones y el PDF
+            with st.expander("Terms and Conditions", expanded=False):
+                st.write("""
+                * This study is part of the Ageism AI project funded by VolksWagen Foundation.
+                * Data is anonymous and will be used for scientific studies.
+                * If you agree, you accept to participate in the study.
+                """)
+                
+                if pdf_path.exists():
+                    display_pdf_from_file(pdf_path)
+                else:
+                    st.error("Terms and Conditions PDF not found.")
+                
+                # Checkbox para aceptar términos y condiciones
+            agree = st.checkbox("I agree to the terms and conditions")
+
+            # Entrada de edad opcional
+            #st.markdown("<h4 style='text-align: start;'>(Optional)How old are you? </h4>", unsafe_allow_html=True)
+            st.write("")
+            st.write("(Optional) How old are you?")
+            user_age = st.number_input("Enter your age", step=1)
+            
+            # Preparar y enviar datos a Google Sheets
             current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             values = []
             
             for image_id, steps_data in st.session_state.image_responses.items():
-                # Extraer información de la imagen
                 image_path = Path(image_id)
                 image_type = "older" if "older" in str(image_path) else "neutral"
                 prompt = image_path.name.replace("a_person_", "").replace("an_older_person_", "").replace(".jpg", "")
@@ -733,6 +1093,7 @@ def main():
                         st.session_state.user_id,
                         current_datetime,
                         st.session_state.get('user_age', ''),
+                        "agree" if agree else "none",  # Guardar el valor de aceptación
                         prompt,
                         image_type,
                         step_key,
@@ -741,16 +1102,9 @@ def main():
                     ]
                     values.append(row)
             
-            # Debugging: Mostrar valores que se enviarán
-            #st.write("Data to be sent to Google Sheets:")
-            #st.write(values)
+            body = {'values': values}
             
-            # Preparar el request
-            body = {
-                'values': values
-            }
-            
-            # Intentar enviar a Google Sheets
+            # Enviar datos a Google Sheets
             result = sheets_service.spreadsheets().values().append(
                 spreadsheetId=spreadsheet_id,
                 range='Sheet1!A1',
@@ -759,27 +1113,47 @@ def main():
                 body=body
             ).execute()
             
-            st.success("✅ Data successfully saved to Google Sheets!")
+            #st.success("✅ Data successfully saved to Google Sheets!")
             
-            # Mostrar mensaje de éxito y confeti
-            st.title("Thanks for participating! 😊")
-            st.balloons()
-            st.write("Your responses have been saved.")
-            st.write("We appreciate your time and effort in completing this questionnaire.")
-            
+            # Guardar la edad si se selecciona el botón
+            if st.button("Save Age"):
+                st.session_state.user_age = user_age
+                st.write("Age saved successfully!")
+                
         except Exception as e:
             st.error(f"❌ Error saving to Google Sheets: {str(e)}")
             st.write("Error details:", str(e))
             st.write("Please contact support with the error message above.")
         
+        # Botón para iniciar un nuevo cuestionario
+        st.markdown("""
+        <style>
+        div.stButton > button {
+            display: block;
+            margin: 0 auto;
+            font-size: 20px;
+            padding: 10px 40px;
+            background-color: #2986cc; 
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        div.stButton > button:hover {
+            background-color: #1a5d9c; /* Cambia a un color de fondo diferente cuando el mouse está encima */
+            color: #ffffff; /* Mantén el color del texto en blanco al pasar el mouse */
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
         if st.button("Start New Questionnaire"):
             st.session_state.current_step = 1
             st.session_state.image_responses = {}
-            st.session_state.page = 'intro'
+            st.session_state.page = 'landing'
             st.session_state.user_id = str(uuid.uuid4())
             st.session_state.user_age = None
             st.session_state.review_mode = False
-            st.rerun()     
+            st.rerun()
 
 if __name__ == "__main__":
     main()
