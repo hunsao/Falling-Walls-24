@@ -3,7 +3,6 @@ from streamlit_navigation_bar import st_navbar
 from streamlit_carousel import carousel
 import streamlit.components.v1 as components
 
-
 import io
 import os
 import re
@@ -463,6 +462,7 @@ def initialize_google_sheet(sheets_service, spreadsheet_id):
 def image_to_base64(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode()
+    
 # Función auxiliar para guardar una imagen en base64
 def save_image_base64(image_path, output_file):
     encoded = image_to_base64(image_path)
@@ -723,7 +723,7 @@ def main():
         #st.write("Estado de página: intro")  # Mensaje de depuración
         #st.markdown("<h1 style='text-align: center;'>AGEAI Project</h1>", unsafe_allow_html=True)
         st.markdown("<h2 style='text-align: center;'>How is age depicted in Generative AI?</h2>", unsafe_allow_html=True)
-        st.markdown("<h4 style='text-align: center;'></h4>", unsafe_allow_html=True)
+        #st.markdown("<h4 style='text-align: center;'></h4>", unsafe_allow_html=True)
 
         #col1, col2 = st.columns([2, 2]) 
 
@@ -842,33 +842,59 @@ def main():
                 st.session_state.page = 'questionnaire'
                 st.rerun()
 
-        components.html(particles_js, height=350,width=1000, scrolling=False)
+        components.html(particles_js, height=350,width=1050, scrolling=False)
 
 
 #QUESTIONNAIRE
     elif st.session_state.page == 'questionnaire':
+        # st.markdown(
+        # """
+        # <style>
+        # #root > div:nth-child(1) > div > div > div > div > section > div {
+        #     padding-top: 0rem;
+        # }
+        # </style>
+        # """, 
+        # unsafe_allow_html=True)
+
         st.markdown(
         """
         <style>
         #root > div:nth-child(1) > div > div > div > div > section > div {
             padding-top: 0rem;
         }
+        /* Estilos más específicos para centrar las imágenes */
+        [data-testid="column"] > div:first-child {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        [data-testid="column"] > div:first-child > div {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        /* Asegurar que el caption también está centrado */
+        [data-testid="caption"] {
+            text-align: center !important;
+        }
         </style>
         """, 
         unsafe_allow_html=True)
+
         #st.title(f"Prompt: Person / Older person {st.session_state.current_prompt.replace('_', ' ')}")
         col1, col2, col3 = st.columns([2, 2, 1])
         # Obtener imágenes para el prompt actual
         current_prompt = st.session_state.current_prompt   
         images = st.session_state.image_handler.get_images_for_prompt(current_prompt)
 
-
         for i, (key, image_data) in enumerate(images.items()):
                     column = col1 if i == 0 else col2
                     with column:
                         if image_data['path'].exists():
                             image = Image.open(image_data['path'])
-                            st.image(image, width=400,caption=f"Prompt: {image_data['name']}") #caption=image_data['name'])
+                            st.image(image, width=400,use_column_width=True,caption=f"Prompt: {image_data['name']}") #caption=image_data['name'])
                         else:
                             st.error(f"Image not found: {image_data['path']}")
                         
@@ -894,39 +920,12 @@ def main():
                         # Crear el multiselect encima de los botones
                         selected_tags = st.session_state.image_responses[image_id][step_key]["Tags"]
 
-                        # selected = st.multiselect(
-                        #     "Selected Tags",
-                        #     options=tags[st.session_state.current_step],
-                        #     default=selected_tags,  # Usar la lista de etiquetas seleccionadas como por defecto
-                        #     key=f"multiselect_{image_id}_{st.session_state.current_step}"  # Clave única
-                        # )
-
                         selected = selected_tags #AFEGIT PER LO D'ADALT
 
                         # Actualizar el estado de las etiquetas en función del multiselect
                         st.session_state.image_responses[image_id][step_key]["Tags"] = selected
 
                         btn_cols = st.columns(2)
-
-                        # Primero, agregamos el CSS personalizado al inicio de la app
-                        # st.markdown("""
-                        # <style>
-                        #     /* Estilo para botones no seleccionados */
-                        #     .stButton > button {
-                        #         color: white;
-                        #         background-color: #2986cc;
-                        #         border: 1px solid white;
-                        #         width: 100%;
-                        #     }
-                            
-                        #     /* Estilo para botones seleccionados */
-                        #     .stButton > button[kind=secondary] {
-                        #         background-color: #28a745cc;
-                        #         color: white;
-                        #         border: 1px solid white;
-                        #     }
-                        # </style>
-                        # """, unsafe_allow_html=True)
 
                         st.markdown("""
                         <style>
@@ -993,7 +992,7 @@ def main():
                         # Formulario individual para cada imagen
                         form = st.form(key=f'form_step{st.session_state.current_step}_img{i}')
                         comment = form.text_input(
-                            label='(Optional) Describe the image in other words (20 characters):',
+                            label='Describe the image in other words (20 characters):',
                             placeholder="Write here"
                         )
                         submit_button = form.form_submit_button(label='Submit')
@@ -1010,14 +1009,14 @@ def main():
                                     words_list.append(comment)
                                     st.session_state.image_responses[image_id][step_key]["Words"] = words_list
 
-                        # Mostrar el multiselect con las palabras escritas
-                        # words_list = st.session_state.image_responses[image_id][step_key].get("Words", [])
-                        # st.multiselect(
-                        #     "Submitted Words",  # Etiqueta para el multiselect de palabras
-                        #     options=words_list,
-                        #     key=f"words_multiselect_{image_id}_{st.session_state.current_step}",  # Clave única
-                        #     default=words_list
-                        # )
+                       #Mostrar el multiselect con las palabras escritas
+                        words_list = st.session_state.image_responses[image_id][step_key].get("Words", [])
+                        st.multiselect(
+                            "Submitted Words",  # Etiqueta para el multiselect de palabras
+                            options=words_list,
+                            key=f"words_multiselect_{image_id}_{st.session_state.current_step}",  # Clave única
+                            default=words_list
+                        )
 
         # Columna estrecha a la derecha
         with col3:
@@ -1028,7 +1027,7 @@ def main():
             components.html(particles_js, height=800,width=250, scrolling=False)
 
             # Texto "Step x of 3"
-            st.markdown(f"<h2 style='text-align: center;'>Step {st.session_state.current_step} of 3</h2>", unsafe_allow_html=True)
+            st.markdown(f"<h4 style='text-align: center;'>Step {st.session_state.current_step} of 3</h4>", unsafe_allow_html=True)
             
             button_label = "Next Images" if st.session_state.current_step < 3 else "Finish"
             if st.button(button_label, key=f"next_button_step{st.session_state.current_step}_unique", use_container_width=True):
@@ -1036,22 +1035,68 @@ def main():
                     st.session_state.current_step += 1
                     st.session_state.current_prompt = random.choice(prompts)  # Cambiar el prompt para el siguiente paso
                 else:
-                    st.session_state.page = 'end'  # Cambiar a la página de finalización
+                    #st.session_state.page = 'end'  # Cambiar a la página de finalización
+                    st.session_state.page = 'age_input'  # Cambiar a la página de finalización
                     st.session_state.current_step = 1  # Reiniciar el paso si es necesario para un nuevo flujo
                     st.session_state.current_prompt = random.choice(prompts)  # Seleccionar un nuevo prompt
 
                 # Regresar a la página de prompt1 para mostrar el nuevo prompt
-                if st.session_state.page != 'end':  # Solo redirigir si no estamos en la página de finalización
+                #if st.session_state.page != 'end':  # Solo redirigir si no estamos en la página de finalización
+                if st.session_state.page != 'age_input':  # Solo redirigir si no estamos en la página de finalización
                     st.session_state.page = 'prompt1'
                 st.rerun()
 
-# # Página final de agradecimiento
+# Nueva página para introducir la edad
+    elif st.session_state.page == 'age_input':
+        st.markdown("<h2 style='text-align: center;'>How old are you? (optional)</h2>", unsafe_allow_html=True)
+        st.write("")
+
+        #user_age = st.text_input("", value="", placeholder="...")  # Campo de texto para la edad (opcional)
+        user_age = st.number_input("Enter your age", step=1)  # Campo de texto para la edad (opcional)
+
+        st.markdown("""
+        <style>
+        div.stButton > button:focus, /* Añadido :focus */
+        div.stButton > button:active {
+            background-color: #1a5d9c;
+            color: white !important; /* Añadido !important */
+            border: none !important;
+            outline: none; /* Evita el contorno azul por defecto */
+            box-shadow: none !important;
+        }
+
+        div.stButton > button {  /* Mayor especificidad para :hover */
+            display: block;
+            margin: 0 auto;
+            font-size: 20px;
+            padding: 10px 40px;
+            background-color: #2986cc;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+
+        }
+        div.stButton > button:hover {
+            background-color: #1a5d9c;
+            color: #F0FFFF !important; /* color al pasar el cursor  */
+            border: none;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # Botón de continuar
+        if st.button("Continue"):
+            st.session_state.user_age = user_age  # Guardar la edad (aunque puede estar en blanco)
+            st.session_state.page = 'end'  # Cambiar a la siguiente página
+            st.rerun()
+
+    # Página final de agradecimiento
     elif st.session_state.page == 'end':
         try:
             # Mensaje de agradecimiento
             st.title("Thanks for participating! 😊")
             st.balloons()
-            st.write("Your responses have been saved.")
             st.write("We appreciate your time and effort in completing this questionnaire.")
             
             # Mostrar Términos y Condiciones y el PDF
@@ -1066,60 +1111,82 @@ def main():
                     display_pdf_from_file(pdf_path)
                 else:
                     st.error("Terms and Conditions PDF not found.")
-                
-                # Checkbox para aceptar términos y condiciones
+            
+            # Checkbox para aceptar términos y condiciones
             agree = st.checkbox("I agree to the terms and conditions")
+            
+            # Preparar y enviar datos a Google Sheets solo si aún no se han guardado
+            if not st.session_state.get('data_saved', False):
+                # Solo se ejecuta una vez al finalizar el cuestionario
+                current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                values = []
 
-            # Entrada de edad opcional
-            #st.markdown("<h4 style='text-align: start;'>(Optional)How old are you? </h4>", unsafe_allow_html=True)
-            st.write("")
-            st.write("(Optional) How old are you?")
-            user_age = st.number_input("Enter your age", step=1)
+                for image_id, steps_data in st.session_state.image_responses.items():
+                    image_path = Path(image_id)
+                    image_type = "older" if "older" in str(image_path) else "neutral"
+                    prompt = image_path.name.replace("a_person_", "").replace("an_older_person_", "").replace(".jpg", "")
+
+                    for step_key, step_data in steps_data.items():
+                        tags_str = "|".join(step_data.get("Tags", []))
+                        words_str = "|".join(step_data.get("Words", []))
+
+                        row = [
+                            st.session_state.user_id,
+                            current_datetime,
+                            st.session_state.get('user_age', ''),
+                            "agree" if agree else "none",  # Guardar el valor de aceptación
+                            prompt,
+                            image_type,
+                            step_key,
+                            tags_str,
+                            words_str
+                        ]
+                        values.append(row)
+
+                body = {'values': values}
+
+                # Enviar datos a Google Sheets
+                result = sheets_service.spreadsheets().values().append(
+                    spreadsheetId=spreadsheet_id,
+                    range='Sheet1!A1',
+                    valueInputOption='USER_ENTERED',
+                    insertDataOption='INSERT_ROWS',
+                    body=body
+                ).execute()
+
+                # Marcar datos como guardados
+                st.session_state.data_saved = True
+                #st.success("✅ Data successfully saved to Google Sheets!")
             
-            # Preparar y enviar datos a Google Sheets
-            current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            values = []
-            
-            for image_id, steps_data in st.session_state.image_responses.items():
-                image_path = Path(image_id)
-                image_type = "older" if "older" in str(image_path) else "neutral"
-                prompt = image_path.name.replace("a_person_", "").replace("an_older_person_", "").replace(".jpg", "")
+            # Actualizar columna de aceptación en las filas del usuario si agree está marcado
+            if agree:
+                # Obtener el user_id del usuario actual
+                user_id = st.session_state.user_id
                 
-                for step_key, step_data in steps_data.items():
-                    tags_str = "|".join(step_data.get("Tags", []))
-                    words_str = "|".join(step_data.get("Words", []))
-                    
-                    row = [
-                        st.session_state.user_id,
-                        current_datetime,
-                        st.session_state.get('user_age', ''),
-                        "agree" if agree else "none",  # Guardar el valor de aceptación
-                        prompt,
-                        image_type,
-                        step_key,
-                        tags_str,
-                        words_str
-                    ]
-                    values.append(row)
-            
-            body = {'values': values}
-            
-            # Enviar datos a Google Sheets
-            result = sheets_service.spreadsheets().values().append(
-                spreadsheetId=spreadsheet_id,
-                range='Sheet1!A1',
-                valueInputOption='USER_ENTERED',
-                insertDataOption='INSERT_ROWS',
-                body=body
-            ).execute()
-            
-            #st.success("✅ Data successfully saved to Google Sheets!")
-            
-            # Guardar la edad si se selecciona el botón
-            if st.button("Save Age"):
-                st.session_state.user_age = user_age
-                st.write("Age saved successfully!")
+                # Leer todos los datos para encontrar las filas del usuario actual
+                sheet_data = sheets_service.spreadsheets().values().get(
+                    spreadsheetId=spreadsheet_id,
+                    range='Sheet1!A:D'  # Cambiar si las columnas de usuario/aceptación están en otro rango
+                ).execute().get('values', [])
                 
+                # Encontrar las filas correspondientes al user_id actual y actualizar la columna de aceptación
+                row_indices_to_update = []
+                for i, row in enumerate(sheet_data):
+                    if row[0] == user_id:  # Suponiendo que el user_id está en la columna A (índice 0)
+                        row_indices_to_update.append(i + 1)  # Índices de fila en Google Sheets (1-based)
+                
+                # Realizar la actualización en la hoja
+                for row_index in row_indices_to_update:
+                    # Actualizar la cuarta columna (índice 3) a "agree"
+                    sheets_service.spreadsheets().values().update(
+                        spreadsheetId=spreadsheet_id,
+                        range=f'Sheet1!D{row_index}',  # Modificar la columna correcta
+                        valueInputOption='USER_ENTERED',
+                        body={'values': [['agree']]}
+                    ).execute()
+
+                #st.success("✅ Agreement successfully updated for your responses in Google Sheets!")
+        
         except Exception as e:
             st.error(f"❌ Error saving to Google Sheets: {str(e)}")
             st.write("Error details:", str(e))
@@ -1128,20 +1195,31 @@ def main():
         # Botón para iniciar un nuevo cuestionario
         st.markdown("""
         <style>
-        div.stButton > button {
+        div.stButton > button:focus, /* Añadido :focus */
+        div.stButton > button:active {
+            background-color: #1a5d9c;
+            color: white !important; /* Añadido !important */
+            border: none !important;
+            outline: none; /* Evita el contorno azul por defecto */
+            box-shadow: none !important;
+        }
+
+        div.stButton > button {  /* Mayor especificidad para :hover */
             display: block;
             margin: 0 auto;
             font-size: 20px;
             padding: 10px 40px;
-            background-color: #2986cc; 
+            background-color: #2986cc;
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
+
         }
         div.stButton > button:hover {
-            background-color: #1a5d9c; /* Cambia a un color de fondo diferente cuando el mouse está encima */
-            color: #ffffff; /* Mantén el color del texto en blanco al pasar el mouse */
+            background-color: #1a5d9c;
+            color: #F0FFFF !important; /* color al pasar el cursor  */
+            border: none;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -1153,6 +1231,7 @@ def main():
             st.session_state.user_id = str(uuid.uuid4())
             st.session_state.user_age = None
             st.session_state.review_mode = False
+            st.session_state.data_saved = False
             st.rerun()
 
 if __name__ == "__main__":
