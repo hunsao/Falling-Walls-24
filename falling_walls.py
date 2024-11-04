@@ -716,7 +716,8 @@ def main():
 
         # carousel(items=test_items)
         
-        video_file = open("TEST/FALLING_WALLS/gif.mp4", "rb")
+        video_path = Path(__file__).parent / "IMAGES" / "video.mp4"
+        video_file = open(video_path, "rb")
         video_bytes = video_file.read()
         st.video(video_bytes, start_time=0, end_time=None, loop=True, autoplay=True, muted=True)
 
