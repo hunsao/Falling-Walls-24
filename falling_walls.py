@@ -660,7 +660,20 @@ def main():
         video_path = Path(__file__).parent / "IMAGES" / "video.mp4"
         video_file = open(video_path, "rb")
         video_bytes = video_file.read()
-        st.video(video_bytes, start_time=0, end_time=None, loop=True, autoplay=True, muted=True)
+
+        st.markdown(
+        """
+        <div style="max-width: 800px; margin: 0 auto;">
+            <video width="100%" autoplay loop muted>
+                <source src="data:video/mp4;base64,{base64_video}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        """.format(base64_video=base64.b64encode(video_bytes).decode('utf-8')),
+        unsafe_allow_html=True)
+
+      
+        #st.video(video_bytes, start_time=0, end_time=None, loop=True, autoplay=True, muted=True)
 
         # st.markdown("""
         # <center>
