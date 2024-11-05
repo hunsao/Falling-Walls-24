@@ -1,4 +1,5 @@
-# 4-11 NO TERMS AND CONDITIONS
+# 5-11 CANVIS JUAN
+
 import streamlit as st
 from streamlit_navigation_bar import st_navbar
 from streamlit_carousel import carousel
@@ -175,6 +176,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed")
 
+#GSERVICES    
 def get_google_services():
     try:
         encoded_sa = os.getenv('GOOGLE_SERVICE_ACCOUNT')
@@ -182,7 +184,6 @@ def get_google_services():
             raise ValueError("La variable de entorno GOOGLE_SERVICE_ACCOUNT no está configurada")
 
         sa_json = base64.b64decode(encoded_sa).decode('utf-8')
-
         sa_dict = json.loads(sa_json)
 
         credentials = service_account.Credentials.from_service_account_info(
@@ -245,8 +246,6 @@ def find_images_folder_and_csv_id(service, parent_folder_name):
                 csv_file_id = item['id']
         if not images_folder_id:
             st.error("No se encontró la carpeta 'IMAGES'.")
-        #if not csv_file_id:
-            #st.error("No se encontró el archivo CSV.")
         return images_folder_id, csv_file_id
     except Exception as e:
         st.error(f"Error al buscar la carpeta 'IMAGES' y el CSV: {str(e)}")
@@ -291,8 +290,7 @@ def get_images_for_prompt_drive(_drive_service, prompt):
     neutral_folder_id = "1z8zZJQqMZDFtJG1hx7mosAt_5DlXuZU8"
     older_folder_id = "1-zseBhQMP-KeK8EoLIt6M45zTApHOGzc"
 
-    prompt_formatted = prompt.replace(" ", "_") 
-
+    prompt_formatted = prompt.replace(" ", "_")  
     neutral_filename = f"a_person_{prompt_formatted}.jpg"
     older_filename = f"an_older_person_{prompt_formatted}.jpg"
     
@@ -306,15 +304,14 @@ def get_images_for_prompt_drive(_drive_service, prompt):
     older_results = _drive_service.files().list(q=older_image_query, fields="files(id, name)").execute()
     older_files = older_results.get('files', [])
     
+
     older_file = next((file for file in older_files if file['name'] == older_filename), None)
 
-    # Check if the images are found
     if neutral_file:
-        images['neutral'] = neutral_file  # Take the first image
+        images['neutral'] = neutral_file 
     if older_file:
-        images['older'] = older_file  # Take the first image
+        images['older'] = older_file  
 
-    # Ensure both images exist, otherwise return an error
     if 'neutral' not in images or 'older' not in images:
         st.error(f"Error: No se encontraron imágenes para el prompt '{prompt_formatted}'. Asegúrate de que existan en Google Drive.")
         return {}
@@ -324,18 +321,14 @@ def get_images_for_prompt_drive(_drive_service, prompt):
 def get_images_for_prompt(prompt):
     images = {}
     
-    # Adjust the prompt name for file search
-    prompt_formatted = prompt.replace(" ", "_")  # Replace spaces with underscores for filenames
+    prompt_formatted = prompt.replace(" ", "_")  
 
-    # Define expected filenames for neutral and older images
     neutral_filename = f"a_person_{prompt_formatted}.jpg"
     older_filename = f"an_older_person_{prompt_formatted}.jpg"
     
-    # Folder IDs for "neutral" and "older"
     neutral_image_path = Path(__file__).parent / "IMAGES" / "neutral" / neutral_filename
     older_image_path = Path(__file__).parent / "IMAGES" / "older" / older_filename
 
-    # Verificar si las imágenes existen en las rutas especificadas
     if os.path.exists(neutral_image_path):
         images['neutral'] = Image.open(neutral_image_path)  # Cargar la imagen neutral
     else:
@@ -346,32 +339,26 @@ def get_images_for_prompt(prompt):
     else:
         st.warning(f"No se encontró la imagen older para el prompt '{prompt_formatted}'.")
 
-    # Asegurarse de que ambas imágenes existan, de lo contrario retornar error
     if 'neutral' not in images or 'older' not in images:
         st.error(f"Error: No se encontraron ambas imágenes para el prompt '{prompt_formatted}'.")
         return {}
 
     return images
 
-############### GOOGLE SHEETS #############
+#SHEETS
 def save_responses_to_google_sheets(sheets_service, spreadsheet_id, user_id, user_age, image_responses):
     try:
         current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         values = []
         
-        # Para cada imagen y sus respuestas
         for image_id, steps_data in image_responses.items():
-            # Extraer información de la imagen
             image_path = Path(image_id)
             image_type = "older" if "older" in str(image_path) else "neutral"
             prompt = image_path.name.replace("a_person_", "").replace("an_older_person_", "").replace(".jpg", "")
             
-            # Para cada paso (1-3) y sus respuestas
             for step_key, step_data in steps_data.items():
-                # Guardar tags
                 tags_str = "|".join(step_data.get("Tags", []))
                 
-                # Guardar palabras adicionales
                 words_str = "|".join(step_data.get("Words", []))
                 
                 # Crear fila con todos los datos
@@ -387,7 +374,6 @@ def save_responses_to_google_sheets(sheets_service, spreadsheet_id, user_id, use
                 ]
                 values.append(row)
         
-        # Preparar el cuerpo de la solicitud
         body = {
             'values': values
         }
@@ -395,7 +381,7 @@ def save_responses_to_google_sheets(sheets_service, spreadsheet_id, user_id, use
         # Enviar datos a Google Sheets
         result = sheets_service.spreadsheets().values().append(
             spreadsheetId=spreadsheet_id,
-            range='Sheet1!A1',  # Asegúrate de que esto coincida con tu hoja
+            range='Sheet1!A1', 
             valueInputOption='USER_ENTERED',
             insertDataOption='INSERT_ROWS',
             body=body
@@ -419,7 +405,6 @@ def initialize_google_sheet(sheets_service, spreadsheet_id):
             range='Sheet1!A1:H1'
         ).execute()
         
-        # Si no hay encabezados, añadirlos
         if 'values' not in result:
             sheets_service.spreadsheets().values().update(
                 spreadsheetId=spreadsheet_id,
@@ -434,7 +419,7 @@ def initialize_google_sheet(sheets_service, spreadsheet_id):
         st.error(f"Error initializing Google Sheet: {str(e)}")
         return False
 
-############### SENSE DRIVE ###############
+#SENSE DRIVE
 def image_to_base64(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode()
@@ -597,14 +582,11 @@ prompts = [
     "going for walks",
     "heating the dwelling"]
 
+#MAIN
 def main():
-    # Inicializar el estado de la sesión
     initialize_session_state()
 
-    # Inicializar rutas
-    #intro_image = Path("IMAGES/Imagen_intro.png")
     intro_image = Path(__file__).parent / "IMAGES" / "Imagen_intro.png"
-    #pdf_path = Path("TERMS/TERMS.pdf")
     pdf_path = Path(__file__).parent / "TERMS" / "TERMS.pdf"
 
     drive_service, sheets_service = get_google_services()
@@ -619,9 +601,8 @@ def main():
 
     parent_folder_id = extract_folder_id(drive_url)
 
-    # Inicializar estado de sesión
     if 'page' not in st.session_state:
-        st.session_state.page = 'landing' #intro
+        st.session_state.page = 'landing' 
 
     if 'current_step' not in st.session_state:
         st.session_state.current_step = 1
@@ -634,23 +615,18 @@ def main():
     if 'all_files' not in st.session_state:
         st.session_state.all_files = []
 
-    #st.write(f"Estado actual de la página: {st.session_state.page}")
 
-    # Cargar archivos desde Google Drive (solo CSV o PDF, no imágenes) Si el folder ID de Google Drive se ha encontrado
     if parent_folder_id:
-        # Buscar la carpeta de imágenes y el archivo CSV
         images_folder_id, csv_file_id = find_images_folder_and_csv_id(drive_service, parent_folder_name)
-        # Verificar que la carpeta de imágenes fue encontrada (no se considera el CSV)
         if images_folder_id: #and csv_file_id:
-            current_prompt = random.choice(prompts)  # Selecciona un prompt aleatorio
-            #images = get_images_for_prompt(drive_service, current_prompt)  #DRIVE
-            images = get_images_for_prompt(current_prompt)  # Implementa esta función
+            current_prompt = random.choice(prompts)  
+            images = get_images_for_prompt(current_prompt)  
             if 'neutral' in images and 'older' in images:
                 st.session_state.random_images = [images['neutral'], images['older']]
             else:
                 st.error("No se encontraron imágenes adecuadas para el prompt.")
             
-            if not st.session_state.all_files: # Crucial: Get all files, including the PDF
+            if not st.session_state.all_files: 
                 results = drive_service.files().list(
                     q=f"'{parent_folder_id}' in parents",  # Query for files in the parent folder
                     fields="nextPageToken, files(id, name, mimeType)"
@@ -660,8 +636,6 @@ def main():
             st.error("No se pudieron encontrar las imágenes")  #o el archivo CSV.
     else:
         st.error("Could not obtain the parent folder ID.")
-
-##########################################################################################################
 
 #Landing
     if st.session_state.page == 'landing':
@@ -678,65 +652,43 @@ def main():
             </style>
 
             <!-- Título centrado -->
-            <h2 style='text-align: center;'>How is age depicted in AI?</h2>
+            <h1 style='text-align: center;'>How is age depicted in AI?</h1>
             """, 
             unsafe_allow_html=True
         )
 
-        # test_items = [
-        #     dict(
-        #         title="Slide 1",
-        #         text="A tree in the savannah",
-        #         img="https://img.freepik.com/free-photo/wide-angle-shot-single-tree-growing-clouded-sky-during-sunset-surrounded-by-grass_181624-22807.jpg?w=1380&t=st=1688825493~exp=1688826093~hmac=cb486d2646b48acbd5a49a32b02bda8330ad7f8a0d53880ce2da471a45ad08a4",
-        #         link="https://discuss.streamlit.io/t/new-component-react-bootstrap-carousel/46819",
-        #     ),
-        #     # dict(
-        #     #     title="Slide 2",
-        #     #     text="A wooden bridge in a forest in Autumn",
-        #     #     img="https://img.freepik.com/free-photo/beautiful-wooden-pathway-going-breathtaking-colorful-trees-forest_181624-5840.jpg?w=1380&t=st=1688825780~exp=1688826380~hmac=dbaa75d8743e501f20f0e820fa77f9e377ec5d558d06635bd3f1f08443bdb2c1",
-        #     #     link="https://github.com/thomasbs17/streamlit-contributions/tree/master/bootstrap_carousel",
-        #     # ),
-        #     # dict(
-        #     #     title="Slide 3",
-        #     #     text="A distant mountain chain preceded by a sea",
-        #     #     img="https://img.freepik.com/free-photo/aerial-beautiful-shot-seashore-with-hills-background-sunset_181624-24143.jpg?w=1380&t=st=1688825798~exp=1688826398~hmac=f623f88d5ece83600dac7e6af29a0230d06619f7305745db387481a4bb5874a0",
-        #     #     link="https://github.com/thomasbs17/streamlit-contributions/tree/master",
-        #     # ),
-        #     # # dict(
-        #     #     title="Slide 4",
-        #     #     text="PANDAS",
-        #     #     img="TEST/FALLING_WALLS/gif.mp4",
-        #     # ),
-        #     # dict(
-        #     #     title="Slide 4",
-        #     #     text="CAT",
-        #     #     img="cat.jpg",
-        #     # ),
-        # ]
-
-        # carousel(items=test_items)
-        
         video_path = Path(__file__).parent / "IMAGES" / "video.mp4"
         video_file = open(video_path, "rb")
         video_bytes = video_file.read()
         st.video(video_bytes, start_time=0, end_time=None, loop=True, autoplay=True, muted=True)
 
+        # st.markdown("""
+        # <center>
+        # <h3>Ready to play?</h3>
+        # <p style="text-align: justify;">
+        # Tag images to reveal how Midjourney portrays emotions, roles, and autonomy across ages. Your insights fuel the “Ageism in AI” Project, funded by the Volkswagen Foundation.
+        # </p>
+        # </center>
+        # """, unsafe_allow_html=True)
+
         st.markdown("""
         <center>
-        <p style="text-align: justify;">
-        In this experience, you'll explore AI-generated images using prompts in Midjourney and analyze how age is represented. Your task is to identify how age is represented in relation to emotions, roles and autonomy, 
-        by selecting different tags in each image and by describing the differences between the two age groups depicted. This study is part of the Ageism AI project funded by Volkswagen Foundation.
-        </p>
+        <h3>Ready to play?</h3>
         </center>
         """, unsafe_allow_html=True)
 
-        #st.markdown("")
+        st.markdown("""
+        <center>
+        <h5>Tag images to reveal how Midjourney portrays emotions, roles, and autonomy across ages.</h5>
+        </center>
+        """, unsafe_allow_html=True)
 
-        # st.markdown("""
-        # <center>
-        # This study is part of the Ageism AI project funded by Volkswagen Foundation.
-        # </center>
-        # """, unsafe_allow_html=True)
+        st.markdown("""
+        <center>
+        <h6>Your insights fuel the “Ageism in AI” Project, funded by the Volkswagen Foundation.</h6>
+        </center>
+        """, unsafe_allow_html=True)
+
 
         st.markdown("""
         <style>
@@ -770,22 +722,20 @@ def main():
         """, unsafe_allow_html=True)
         
         if st.button("Start", key="intro_button", use_container_width=False):
-        # if st.button("Go to Introduction"):
             st.session_state.page = 'prompt1'
             st.rerun()
 
 #Prompt1
     elif st.session_state.page == 'prompt1':
-        # Si current_prompt no está establecido, selecciona un prompt aleatorio
         if 'current_prompt' not in st.session_state:
             st.session_state.current_prompt = random.choice(prompts) 
 
-        current_prompt = st.session_state.current_prompt  # Usar el prompt guardado
+        current_prompt = st.session_state.current_prompt  
 
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.markdown(f"<h2 style='text-align: center;'>STEP {st.session_state.current_step} of 3</h2>", unsafe_allow_html=True)
-            st.markdown(f"<h4 style='text-align: center;'>How an older person and a person {current_prompt.replace('_', ' ')} are depicted in Midjourney ?</h4>", unsafe_allow_html=True)
+            #st.markdown(f"<h2 style='text-align: center;'>STEP {st.session_state.current_step} of 3</h2>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align: center;'>How does AI depict individuals {current_prompt.replace('_', ' ')} based on their age?</h2>", unsafe_allow_html=True)
             
             st.markdown("""
             <style>
@@ -828,16 +778,6 @@ def main():
 
 #QUESTIONNAIRE
     elif st.session_state.page == 'questionnaire':
-        # st.markdown(
-        # """
-        # <style>
-        # #root > div:nth-child(1) > div > div > div > div > section > div {
-        #     padding-top: 0rem;
-        # }
-        # </style>
-        # """, 
-        # unsafe_allow_html=True)
-
         st.markdown(
         """
         <style>
@@ -864,8 +804,8 @@ def main():
         """, 
         unsafe_allow_html=True)
 
-        #st.title(f"Prompt: Person / Older person {st.session_state.current_prompt.replace('_', ' ')}")
         col1, col2, col3 = st.columns([2, 2, 1.4])
+
         # Obtener imágenes para el prompt actual
         current_prompt = st.session_state.current_prompt   
         images = st.session_state.image_handler.get_images_for_prompt(current_prompt)
@@ -875,7 +815,11 @@ def main():
                     with column:
                         if image_data['path'].exists():
                             image = Image.open(image_data['path'])
-                            st.image(image, width=400,use_column_width=True,caption=f"Prompt: {image_data['name']}") #caption=image_data['name'])
+                            # st.image(image, width=400,use_column_width=True,caption=f"Prompt: {image_data['name']}")
+                            st.image(image,width=400,use_column_width=True)
+                            caption_text = image_data['name'].replace("Older person", "<b>Older person</b>").replace("Person", "<b>Person</b>")
+                            full_caption = f"<div style='text-align: center;'>Prompt: {caption_text}</div>"
+                            st.markdown(full_caption, unsafe_allow_html=True)
                         else:
                             st.error(f"Image not found: {image_data['path']}")
                         
@@ -888,7 +832,6 @@ def main():
                         if step_key not in st.session_state.image_responses[image_id]:
                             st.session_state.image_responses[image_id][step_key] = {"Tags": [], "Comments": "", "Words": []}
 
-                        # Tags
                         tags = {
                             1: ["Vulnerable", "Strong", "Hallucinated", "Realistic", "Passive", "Active",
                                 "Weak", "Capable", "Relaxed", "Worried"],
@@ -903,7 +846,6 @@ def main():
 
                         selected = selected_tags #AFEGIT PER LO D'ADALT
 
-                        # Actualizar el estado de las etiquetas en función del multiselect
                         st.session_state.image_responses[image_id][step_key]["Tags"] = selected
 
                         btn_cols = st.columns(2)
@@ -947,29 +889,6 @@ def main():
                         </style>
                         """, unsafe_allow_html=True)
 
-                        # for j, tag in enumerate(tags[st.session_state.current_step]):
-                        #     with btn_cols[j % 2]:
-                        #         button_key = f"tag_button_{st.session_state.current_step}_{i}_{j}"
-                                
-                        #         # Determinar si la etiqueta está seleccionada
-                        #         is_selected = tag in selected
-                                
-                        #         # Usar el parámetro 'type' de Streamlit para cambiar el estilo
-                        #         if st.button(
-                        #             tag, 
-                        #             key=button_key, 
-                        #             use_container_width=True,
-                        #             type="secondary" if is_selected else "primary"
-                        #         ):
-                        #             # Alternar la selección de la etiqueta
-                        #             if is_selected:
-                        #                 selected.remove(tag)
-                        #             else:
-                        #                 selected.append(tag)
-                        #             # Actualizar el estado de sesión con las etiquetas modificadas
-                        #             st.session_state.image_responses[image_id][step_key]["Tags"] = selected
-                        #             st.rerun()
-
                         current_step = st.session_state.current_step
                         tag_button_fragment(image_id, step_key, tags[current_step])
 
@@ -983,22 +902,19 @@ def main():
 
                         if submit_button:
                             if comment:
-                                # Asegurarse de que la lista de palabras esté inicializada
                                 if "Words" not in st.session_state.image_responses[image_id][step_key]:
                                     st.session_state.image_responses[image_id][step_key]["Words"] = []
                     
-                                # Asegurarse de que no se duplique la palabra
                                 words_list = st.session_state.image_responses[image_id][step_key]["Words"]
                                 if comment not in words_list:
                                     words_list.append(comment)
                                     st.session_state.image_responses[image_id][step_key]["Words"] = words_list
 
-                       #Mostrar el multiselect con las palabras escritas
                         words_list = st.session_state.image_responses[image_id][step_key].get("Words", [])
                         st.multiselect(
-                            "Submitted Words",  # Etiqueta para el multiselect de palabras
+                            "Submitted Words",  
                             options=words_list,
-                            key=f"words_multiselect_{image_id}_{st.session_state.current_step}",  # Clave única
+                            key=f"words_multiselect_{image_id}_{st.session_state.current_step}", 
                             default=words_list
                         )
 
@@ -1012,14 +928,13 @@ def main():
             if st.button(button_label, key=f"next_button_step{st.session_state.current_step}_unique", use_container_width=True):
                 if st.session_state.current_step < 3:
                     st.session_state.current_step += 1
-                    st.session_state.current_prompt = random.choice(prompts)  # Cambiar el prompt para el siguiente paso
+                    st.session_state.current_prompt = random.choice(prompts)  #
                 else:
-                    st.session_state.page = 'age_input'  # Cambiar a la página de finalización
-                    st.session_state.current_step = 1  # Reiniciar el paso si es necesario para un nuevo flujo
-                    st.session_state.current_prompt = random.choice(prompts)  # Seleccionar un nuevo prompt
+                    st.session_state.page = 'age_input'  
+                    st.session_state.current_step = 1  
+                    st.session_state.current_prompt = random.choice(prompts)  
 
-                # Regresar a la página de prompt1 para mostrar el nuevo prompt
-                if st.session_state.page != 'age_input':  # Solo redirigir si no estamos en la página de finalización
+                if st.session_state.page != 'age_input':  
                     st.session_state.page = 'prompt1'
                 st.rerun()
 
@@ -1061,42 +976,26 @@ def main():
         }
         </style>
         """, unsafe_allow_html=True)
-        
-        # # Crear dos columnas para los botones
-        # col1, col2 = st.columns([0.1, 0.1])
-
-        # # Botón de continuar en la primera columna
-        # with col1:
-        #     if st.button("Submit & continue"):
-        #         st.session_state.user_age = user_age  # Guardar la edad (aunque puede estar en blanco)
-        #         st.session_state.page = 'end'  # Cambiar a la siguiente página
-        #         st.rerun()
-
-        # # Botón de omitir en la segunda columna
-        # with col2:
-        #     if st.button("Skip this question"):
-        #         st.session_state.user_age = None  # No guardar la edad
-        #         st.session_state.page = 'end'  # Cambiar a la siguiente página
-        #         st.rerun()
 
         # Botón de continuar
         if st.button("Submit"):
             st.session_state.user_age = user_age  # Guardar la edad (aunque puede estar en blanco)
-            st.session_state.page = 'end'  # Cambiar a la siguiente página
-            st.rerun()
+            st.session_state.page = 'end'  
 
         # Botón de omitir
         if st.button("Skip this question"):
             st.session_state.user_age = None  # No guardar la edad
-            st.session_state.page = 'end'  # Cambiar a la siguiente página
+            st.session_state.page = 'end' 
             st.rerun()
 
 #END
     elif st.session_state.page == 'end':
         try:
+            # Mensaje de agradecimiento
             st.title("Thanks for participating! 😊")
             st.balloons()
             st.write("We appreciate your time and effort in completing this questionnaire.")
+            st.write("How do others tag images? Check out the TV screen to see the most popular results.")
                  
             # Preparar y enviar datos a Google Sheets solo si aún no se han guardado
             if not st.session_state.get('data_saved', False):
@@ -1127,6 +1026,7 @@ def main():
 
                 body = {'values': values}
 
+                # Enviar datos a Google Sheets
                 result = sheets_service.spreadsheets().values().append(
                     spreadsheetId=spreadsheet_id,
                     range='Sheet1!A1',
@@ -1135,7 +1035,6 @@ def main():
                     body=body
                 ).execute()
 
-                # Marcar datos como guardados
                 st.session_state.data_saved = True
                 #st.success("✅ Data successfully saved to Google Sheets!")
         
@@ -1144,7 +1043,6 @@ def main():
             st.write("Error details:", str(e))
             st.write("Please contact support with the error message above.")
         
-        # Botón para iniciar un nuevo cuestionario
         st.markdown("""
         <style>
         div.stButton > button:focus, /* Añadido :focus */
@@ -1176,15 +1074,28 @@ def main():
         </style>
         """, unsafe_allow_html=True)
 
-        if st.button("Start new questionnaire"):
-            st.session_state.current_step = 1
-            st.session_state.image_responses = {}
-            st.session_state.page = 'landing'
-            st.session_state.user_id = str(uuid.uuid4())
-            st.session_state.user_age = None
-            st.session_state.review_mode = False
-            st.session_state.data_saved = False
-            st.rerun()
+        # if st.button("Start new questionnaire"):
+        #     st.session_state.current_step = 1
+        #     st.session_state.image_responses = {}
+        #     st.session_state.page = 'landing'
+        #     st.session_state.user_id = str(uuid.uuid4())
+        #     st.session_state.user_age = None
+        #     st.session_state.review_mode = False
+        #     st.session_state.data_saved = False
+        #     st.rerun()
+
+        # Redirigir automáticamente a la página de inicio
+        st.session_state.current_step = 1
+        st.session_state.image_responses = {}
+        st.session_state.page = 'landing'
+        st.session_state.user_id = str(uuid.uuid4())
+        st.session_state.user_age = None
+        st.session_state.review_mode = False
+        st.session_state.data_saved = False
+
+        time.sleep(10)
+
+        st.rerun()
 
 if __name__ == "__main__":
     main()
