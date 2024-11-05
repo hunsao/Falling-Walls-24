@@ -783,7 +783,7 @@ def main():
 
             st.markdown("")
 
-            if st.button("GO!"):
+            if st.button("GO"):
                 st.session_state.page = 'questionnaire'
                 st.rerun()
 
