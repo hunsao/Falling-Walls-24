@@ -1,4 +1,4 @@
-# 5-11 CANVIS JUAN
+# 6-11 CANVIS POST REUNIO
 
 import streamlit as st
 from streamlit_navigation_bar import st_navbar
@@ -657,22 +657,28 @@ def main():
             unsafe_allow_html=True
         )
 
+        st.markdown("""
+        <center>
+        <h5>Ready to play? Tag images to reveal how Midjourney portrays emotions, roles, and autonomy across ages.</h5>
+        </center>
+        """, unsafe_allow_html=True)
+
         video_path = Path(__file__).parent / "IMAGES" / "video.mp4"
         video_file = open(video_path, "rb")
         video_bytes = video_file.read()
 
         st.markdown(
-        """
-        <div style="max-width: 800px; margin: 0 auto;">
-            <video width="100%" autoplay loop muted>
-                <source src="data:video/mp4;base64,{base64_video}" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-        </div>
-        """.format(base64_video=base64.b64encode(video_bytes).decode('utf-8')),
-        unsafe_allow_html=True)
+            """
+            <div style="max-width: 800px; margin: 0 auto;">
+                <video width="100%" autoplay loop muted>
+                    <source src="data:video/mp4;base64,{base64_video}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            """.format(base64_video=base64.b64encode(video_bytes).decode('utf-8')),
+            unsafe_allow_html=True
+)
 
-      
         #st.video(video_bytes, start_time=0, end_time=None, loop=True, autoplay=True, muted=True)
 
         # st.markdown("""
@@ -684,24 +690,11 @@ def main():
         # </center>
         # """, unsafe_allow_html=True)
 
-        st.markdown("""
-        <center>
-        <h3>Ready to play?</h3>
-        </center>
-        """, unsafe_allow_html=True)
-
-        st.markdown("""
-        <center>
-        <h5>Tag images to reveal how Midjourney portrays emotions, roles, and autonomy across ages.</h5>
-        </center>
-        """, unsafe_allow_html=True)
-
-        st.markdown("""
-        <center>
-        <h6>Your insights fuel the “Ageism in AI” Project, funded by the Volkswagen Foundation.</h6>
-        </center>
-        """, unsafe_allow_html=True)
-
+        # st.markdown("""
+        # <center>
+        # <h3>Ready to play?</h3>
+        # </center>
+        # """, unsafe_allow_html=True)
 
         st.markdown("""
         <style>
@@ -1007,8 +1000,14 @@ def main():
             # Mensaje de agradecimiento
             st.title("Thanks for participating! 😊")
             st.balloons()
-            st.write("We appreciate your time and effort in completing this questionnaire.")
-            st.write("How do others tag images? Check out the TV screen to see the most popular results.")
+            #st.write("We appreciate your time and effort in completing this questionnaire.")
+            # st.markdown("""
+            # <center>
+            # <h6></h6>
+            # </center>
+            # """, unsafe_allow_html=True)
+            st.write("We appreciate your time and effort in completing this questionnaire. Your insights fuel the “Ageism in AI” Project, funded by the Volkswagen Foundation.")
+            st.write("How do others tag images? Check out the TV screen to see the most popular results!")
                  
             # Preparar y enviar datos a Google Sheets solo si aún no se han guardado
             if not st.session_state.get('data_saved', False):
@@ -1106,7 +1105,7 @@ def main():
         st.session_state.review_mode = False
         st.session_state.data_saved = False
 
-        time.sleep(10)
+        time.sleep(20)
 
         st.rerun()
 
