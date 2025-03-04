@@ -1631,6 +1631,77 @@ tag_options_step_1_pl = ["Wrażliwy", "Silny", "Nierealistyczny", "Realistyczny"
 tag_options_step_2_pl = ["Wrażliwy", "Silny", "Nierealistyczny", "Realistyczny", "Pasywny", "Aktywny", "Słaby", "Sprawny", "Zrelaksowany", "Zmartwiony"]
 tag_options_step_3_pl = ["Wrażliwy", "Silny", "Nierealistyczny", "Realistyczny", "Pasywny", "Aktywny", "Słaby", "Sprawny", "Zrelaksowany", "Zmartwiony"]
 
+komunikat_messages_pl = {
+    "traveling": {
+        "neutral": "Komunikat: osoba podróżująca",
+        "older": "Komunikat: starsza osoba podróżująca"
+    },
+    "eating": {
+        "neutral": "Komunikat: osoba jedząca",
+        "older": "Komunikat: starsza osoba jedząc"
+    },
+    "planning shopping": {
+        "neutral": "Komunikat: osoba planująca zakupy",
+        "older": "Komunikat: osoba starsza planująca zakupy"
+    },
+    "taking a break": {
+        "neutral": "Komunikat: osoba robiąca przerwę",
+        "older": "Komunikat: osoba starsza robiąca sobie przerwę"
+    },
+    "participating in sports events": {
+        "neutral": "Komunikat: osoba uczestnicząca w wydarzeniach sportowych",
+        "older": "Komunikat: osoba starsza uczestnicząca w wydarzeniach sportowych"
+    },
+    "receiving personal care services": {
+        "neutral": "Komunikat: osoba otrzymująca usługę opieki osobistej",
+        "older": "Komunikat: osoba starsza otrzymująca usługę opieki osobistej"
+    },
+    "using computers": {
+        "neutral": "Komunikat: osoba korzystająca z komputera",
+        "older": "Komunikat: osoba starsza korzystająca z komputera"
+    },
+    "in the living room": {
+        "neutral": "Komunikat: osoba siedząca w salonie",
+        "older": "Komunikat: osoba starsza siedząca w salonie"
+    },
+    "at work": {
+        "neutral": "Komunikat: osoba w pracy",
+        "older": "Komunikat: starsza osoba w pracy"
+    },
+    "in a job fair": {
+        "neutral": "Komunikat: osoba na targach pracy",
+        "older": "Komunikat: osoba starsza na targach pracy"
+    },
+    "handling home care tasks": {
+        "neutral": "Komunikat: osoba wykonująca zadania opieki domowej",
+        "older": "Komunikat: osoba starsza wykonująca zadania opieki domowej"
+    },
+    "managing the household": {
+        "neutral": "Komunikat: osoba zarządzająca gospodarstwem domowym",
+        "older": "Komunikat: osoba starsza zarządzająca gospodarstwem domowym"
+    },
+    "moving to a new location": {
+        "neutral": "Komunikat: osoba przeprowadzająca się w nowe miejsce",
+        "older": "Komunikat: osoba starsza przeprowadzająca się w nowe miejsce"
+    },
+    "in a study group": {
+        "neutral": "Komunikat: osoby w grupie uczącej się",
+        "older": "Komunikat: osoby starsze w grupie uczącej się"
+    },
+    "in a party": {
+        "neutral": "Komunikat: osoba na imprezie",
+        "older": "Komunikat: osoba starsza na imprezie"
+    },
+    "going for walks": {
+        "neutral": "Komunikat: osoba idąca na spacer",
+        "older": "Komunikat: osoba starsza idąca na spacer"
+    },
+    "heating the dwelling": {
+        "neutral": "Komunikat: osoba ogrzewająca dom",
+        "older": "Komunikat: osoba starsza ogrzewająca dom"
+    }
+}
+
 
 #MAIN
 def main():
@@ -1867,27 +1938,6 @@ def main():
         current_prompt = st.session_state.current_prompt
         images = st.session_state.image_handler.get_images_for_prompt(current_prompt)
 
-        prompt_caption_pl_dict = {
-            "traveling": "podróżujące",
-            "eating": "jedzące",
-            "planning shopping": "planujące zakupy",
-            "taking a break": "robiące sobie przerwę",
-            "participating in sports events": "uczestniczące w wydarzeniach sportowych",
-            "receiving personal care services": "otrzymujące usługi opieki osobistej",
-            "using computers": "korzystające z komputerów",
-            "in the living room": "w salonie", #Changed to salonie to match the example
-            "at work": "w pracy",
-            "in a job fair": "na targach pracy", #Changed to targach pracy to match example
-            "handling home care tasks": "wykonujące zadania opieki domowej",
-            "managing the household": "zarządzające gospodarstwem domowym",
-            "moving to a new location": "przeprowadzające się w nowe miejsce",
-            "in a study group": "w grupie uczącej się",
-            "in a party": "na imprezie", #Changed to na imprezie to match example
-            "going for walks": "idące na spacer",
-            "heating the dwelling": "ogrzewające dom" #Changed to ogrzewające dom to match example
-        }
-        prompt_caption_pl = prompt_caption_pl_dict[current_prompt]
-
 
         for i, (key, image_data) in enumerate(images.items()):
                     column = col1 if i == 0 else col2
@@ -1896,7 +1946,8 @@ def main():
                             image = Image.open(image_data['path'])
                             st.image(image,width=400,use_column_width=True)
                             caption_text = image_data['name'].replace("Older person", "<b>Starsza osoba</b>").replace("Person", "<b>Osoba</b>") # Captions in Polish
-                            full_caption = f"<div style='text-align: center;'>Prompt: {prompt_caption_pl}</div>" #Prompt caption in Polish
+                            komunikat_text = komunikat_messages_pl[current_prompt][key] # Get Komunikat text from dictionary
+                            full_caption = f"<div style='text-align: center;'>{komunikat_text}</div>" # Use Komunikat text as caption
                             st.markdown(full_caption, unsafe_allow_html=True)
                         else:
                             st.error(f"Image not found: {image_data['path']}")
@@ -1971,133 +2022,4 @@ def main():
         div.stButton > button:active {
             background-color: #1a5d9c;
             color: white !important; /* Añadido !important */
-            border: none !important;
-            outline: none; /* Evita el contorno azul por defecto */
-            box-shadow: none !important;
-        }
-
-        div.stButton > button {  /* Mayor especificidad para :hover */
-            display: block;
-            margin: 0 auto;
-            font-size: 20px;
-            padding: 10px 40px;
-            background-color: #2986cc;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-
-        }
-        div.stButton > button:hover {
-            background-color: #1a5d9c;
-            color: #F0FFFF !important; /* color al pasar el cursor  */
-            border: none;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
-        if st.button("Potwierdź"): # Submit age button in Polish
-            st.session_state.user_age = user_age
-            st.session_state.page = 'end'
-
-        if st.button("Pomiń to pytanie"): # Skip age button in Polish
-            st.session_state.user_age = None
-            st.session_state.page = 'end'
-            st.rerun()
-
-#END
-    elif st.session_state.page == 'end':
-        try:
-            st.title("Dziękujemy za udział! 😊") # Thanks title in Polish
-            st.balloons()
-            st.write("Doceniamy Twój czas i wysiłek włożony w wypełnienie tego kwestionariusza. Twoje spostrzeżenia zasilają projekt „Ageism in AI”, finansowany przez Fundację Volkswagena.") # Thanks text 1 in Polish
-            st.write("Jak inni oznaczają obrazy? Sprawdź na ekranie telewizora, aby zobaczyć najpopularniejsze wyniki!") # Thanks text 2 in Polish
-
-            if not st.session_state.get('data_saved', False):
-                current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                values = []
-
-                for image_id, steps_data in st.session_state.image_responses.items():
-                    image_path = Path(image_id)
-                    image_type = "older" if "older" in str(image_path) else "neutral"
-                    prompt = image_path.name.replace("a_person_", "").replace("an_older_person_", "").replace(".jpg", "")
-
-                    for step_key, step_data in steps_data.items():
-                        tags_str = "|".join(step_data.get("Tags", []))
-                        words_str = "|".join(step_data.get("Words", []))
-
-                        row = [
-                            st.session_state.user_id,
-                            current_datetime,
-                            st.session_state.get('user_age', ''),
-                            prompt,
-                            image_type,
-                            step_key,
-                            tags_str,
-                            words_str,
-                            st.session_state.language
-                        ]
-                        values.append(row)
-
-                body = {'values': values}
-
-                result = sheets_service.spreadsheets().values().append(
-                    spreadsheetId=spreadsheet_id,
-                    range='Sheet1!A1',
-                    valueInputOption='USER_ENTERED',
-                    insertDataOption='INSERT_ROWS',
-                    body=body
-                ).execute()
-
-                st.session_state.data_saved = True
-
-        except Exception as e:
-            st.error(f"❌ Error saving to Google Sheets: {str(e)}")
-            st.write("Error details:", str(e))
-            st.write("Please contact support with the error message above.")
-
-        st.markdown("""
-        <style>
-        div.stButton > button:focus, /* Añadido :focus */
-        div.stButton > button:active {
-            background-color: #1a5d9c;
-            color: white !important; /* Añadido !important */
-            border: none !important;
-            outline: none; /* Evita el contorno azul por defecto */
-            box-shadow: none !important;
-        }
-
-        div.stButton > button {  /* Mayor especificidad para :hover */
-            display: block;
-            margin: 0 auto;
-            font-size: 20px;
-            padding: 10px 40px;
-            background-color: #2986cc;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-
-        }
-        div.stButton > button:hover {
-            background-color: #1a5d9c;
-            color: #F0FFFF !important; /* color al pasar el cursor  */
-            border: none;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
-        st.session_state.current_step = 1
-        st.session_state.image_responses = {}
-        st.session_state.page = 'landing'
-        st.session_state.user_id = str(uuid.uuid4())
-        st.session_state.user_age = None
-        st.session_state.review_mode = False
-        st.session_state.data_saved = False
-
-        time.sleep(20)
-
-        st.rerun()
-
-if __name__ == "__main__":
-    main()
+        
