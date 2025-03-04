@@ -2022,4 +2022,133 @@ def main():
         div.stButton > button:active {
             background-color: #1a5d9c;
             color: white !important; /* Añadido !important */
-        
+            border: none !important;
+            outline: none; /* Evita el contorno azul por defecto */
+            box-shadow: none !important;
+        }
+
+        div.stButton > button {  /* Mayor especificidad para :hover */
+            display: block;
+            margin: 0 auto;
+            font-size: 20px;
+            padding: 10px 40px;
+            background-color: #2986cc;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+
+        }
+        div.stButton > button:hover {
+            background-color: #1a5d9c;
+            color: #F0FFFF !important; /* color al pasar el cursor  */
+            border: none;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        if st.button("Potwierdź"): # Submit age button in Polish
+            st.session_state.user_age = user_age
+            st.session_state.page = 'end'
+
+        if st.button("Pomiń to pytanie"): # Skip age button in Polish
+            st.session_state.user_age = None
+            st.session_state.page = 'end'
+            st.rerun()
+
+#END
+    elif st.session_state.page == 'end':
+        try:
+            st.title("Dziękujemy za udział! 😊") # Thanks title in Polish
+            st.balloons()
+            st.write("Doceniamy Twój czas i wysiłek włożony w wypełnienie tego kwestionariusza. Twoje spostrzeżenia zasilają projekt „Ageism in AI”, finansowany przez Fundację Volkswagena.") # Thanks text 1 in Polish
+            st.write("Jak inni oznaczają obrazy? Sprawdź na ekranie telewizora, aby zobaczyć najpopularniejsze wyniki!") # Thanks text 2 in Polish
+
+            if not st.session_state.get('data_saved', False):
+                current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                values = []
+
+                for image_id, steps_data in st.session_state.image_responses.items():
+                    image_path = Path(image_id)
+                    image_type = "older" if "older" in str(image_path) else "neutral"
+                    prompt = image_path.name.replace("a_person_", "").replace("an_older_person_", "").replace(".jpg", "")
+
+                    for step_key, step_data in steps_data.items():
+                        tags_str = "|".join(step_data.get("Tags", []))
+                        words_str = "|".join(step_data.get("Words", []))
+
+                        row = [
+                            st.session_state.user_id,
+                            current_datetime,
+                            st.session_state.get('user_age', ''),
+                            prompt,
+                            image_type,
+                            step_key,
+                            tags_str,
+                            words_str,
+                            st.session_state.language
+                        ]
+                        values.append(row)
+
+                body = {'values': values}
+
+                result = sheets_service.spreadsheets().values().append(
+                    spreadsheetId=spreadsheet_id,
+                    range='Sheet1!A1',
+                    valueInputOption='USER_ENTERED',
+                    insertDataOption='INSERT_ROWS',
+                    body=body
+                ).execute()
+
+                st.session_state.data_saved = True
+
+        except Exception as e:
+            st.error(f"❌ Error saving to Google Sheets: {str(e)}")
+            st.write("Error details:", str(e))
+            st.write("Please contact support with the error message above.")
+
+        st.markdown("""
+        <style>
+        div.stButton > button:focus, /* Añadido :focus */
+        div.stButton > button:active {
+            background-color: #1a5d9c;
+            color: white !important; /* Añadido !important */
+            border: none !important;
+            outline: none; /* Evita el contorno azul por defecto */
+            box-shadow: none !important;
+        }
+
+        div.stButton > button {  /* Mayor especificidad para :hover */
+            display: block;
+            margin: 0 auto;
+            font-size: 20px;
+            padding: 10px 40px;
+            background-color: #2986cc;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+
+        }
+        div.stButton > button:hover {
+            background-color: #1a5d9c;
+            color: #F0FFFF !important; /* color al pasar el cursor  */
+            border: none;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        st.session_state.current_step = 1
+        st.session_state.image_responses = {}
+        st.session_state.page = 'landing'
+        st.session_state.user_id = str(uuid.uuid4())
+        st.session_state.user_age = None
+        st.session_state.review_mode = False
+        st.session_state.data_saved = False
+
+        time.sleep(20)
+
+        st.rerun()
+
+if __name__ == "__main__":
+    main()
