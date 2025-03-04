@@ -577,7 +577,6 @@ prompts = [
     "going for walks",
     "heating the dwelling"]
 
-#TRANSLATIONS
 translated_prompts = {
     "traveling": {
         "EN": "traveling",
@@ -660,7 +659,7 @@ translated_prompts = {
     "in a study group": {
         "EN": "in a study group",
         "DE": "in einer Lerngruppe",
-        "PL": "w grupie studenckiej",
+        "PL": "w grupie uczącej się", # Changed to "w grupie uczącej się"
         "ES": "en un grupo de estudio"
     },
     "in a party": {
@@ -678,10 +677,10 @@ translated_prompts = {
     "heating the dwelling": {
         "EN": "heating the dwelling",
         "DE": "die Wohnung heizen",
-        "PL": "ogrzewając mieszkanie",
+        "PL": "ogrzewając dom", # Changed to "ogrzewając dom"
         "ES": "calentando la vivienda"
     },
-        "Step": { # CHANGE: Añadir traducciones para "Step"
+        "Step": {
         "EN": "Step {} of 3",
         "DE": "Schritt {} von 3",
         "PL": "Krok {} z 3",
@@ -693,7 +692,7 @@ translations = {
     "title_main": {
         "EN": "How is age depicted in AI?",
         "DE": "Wie wird das Alter in KI dargestellt?",
-        "PL": "Jak wiek jest przedstawiany w sztucznej inteligencji?",
+        "PL": "Jak wiek jest przedstawiany przez sztuczną inteligencję?", # Changed to "Jak wiek jest przedstawiany przez sztuczną inteligencję?" (removed hyphen)
         "ES": "¿Cómo se representa la edad en la IA?"
     },
     "subtitle_main": {
@@ -804,7 +803,7 @@ translated_tags = {
     "Hallucinated": {
         "EN": "Hallucinated",
         "DE": "Halluziniert",
-        "PL": "Zahalucynowany",
+        "PL": "Nierealistyczny", # Changed to "Nierealistyczny"
         "ES": "Alucinado"
     },
     "Realistic": {
@@ -834,7 +833,7 @@ translated_tags = {
     "Capable": {
         "EN": "Capable",
         "DE": "Fähig",
-        "PL": "Zdolny",
+        "PL": "Sprawny", # Changed to "Sprawny"
         "ES": "Capaz"
     },
     "Relaxed": {
